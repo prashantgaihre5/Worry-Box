@@ -216,6 +216,7 @@ class _WorryCardState extends State<_WorryCard>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
