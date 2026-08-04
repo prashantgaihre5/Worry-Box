@@ -19,9 +19,9 @@ class CaptureScreen extends StatefulWidget {
   final StorageService storage;
   final AudioService audio;
   final String locale;
-  final VoidCallback onWorryAdded;
+  final void Function(String) onWorryAdded;
   final VoidCallback onToggleLocale;
-  final bool devMode;
+  final VoidCallback onToggleDevMode;
 
   const CaptureScreen({
     super.key,
@@ -30,7 +30,7 @@ class CaptureScreen extends StatefulWidget {
     required this.locale,
     required this.onWorryAdded,
     required this.onToggleLocale,
-    this.devMode = false,
+    required this.onToggleDevMode,
   });
 
   @override
@@ -56,11 +56,8 @@ class _CaptureScreenState extends State<CaptureScreen> {
     setState(() => _isSealing = true);
 
     try {
-      await widget.storage.addWorry(
-        text,
-        devUnlockSeconds: widget.devMode ? 10 : null,
-      );
-      _controller.clear();
+      await widget.storage.addWorry(text);
+      // Wait for _onSealComplete to clear the controller so we can pass the text
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -74,7 +71,8 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   void _onSealComplete() {
     setState(() => _isSealing = false);
-    widget.onWorryAdded();
+    widget.onWorryAdded(_controller.text);
+    _controller.clear();
   }
 
   @override
@@ -91,30 +89,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
       ),
       child: Column(
         children: [
-          // ── Header row: Dev badge + Language toggle ──
+          // ── Header row: Language toggle ──
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (widget.devMode)
-                Container(
-                  margin: const EdgeInsets.only(right: AppSpacing.sp2),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sp2,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentSoft.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    AppStrings.get('devModeBadge', locale: _locale),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppColors.accentSoft,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
               TextButton(
                 onPressed: widget.onToggleLocale,
                 child: Text(
@@ -127,11 +105,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
           const SizedBox(height: AppSpacing.sp6),
 
-          // ── Title ──
-          Text(
-            AppStrings.get('appTitle', locale: _locale),
-            style: Theme.of(context).textTheme.headlineLarge,
-            textAlign: TextAlign.center,
+          // ── Title (long-press to toggle dev mode) ──
+          GestureDetector(
+            onLongPress: widget.onToggleDevMode,
+            child: Text(
+              AppStrings.get('appTitle', locale: _locale),
+              style: Theme.of(context).textTheme.headlineLarge,
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: AppSpacing.sp2),
           Text(
