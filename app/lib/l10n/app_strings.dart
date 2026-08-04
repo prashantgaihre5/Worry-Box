@@ -6,7 +6,7 @@
 class AppStrings {
   // ── English ───────────────────────────────
   static const Map<String, dynamic> en = {
-    'appTitle': 'Abhaya',
+    'appTitle': 'Project Abhaya',
     'subtitle': 'Write it down. Put it away. Come back to it later.',
     'placeholder': "What's on your mind?",
     'submitButton': 'Put it away',
@@ -49,7 +49,7 @@ class AppStrings {
 
   // ── Nepali ────────────────────────────────
   static const Map<String, dynamic> ne = {
-    'appTitle': 'अभय',
+    'appTitle': 'प्रोजेक्ट अभय',
     'subtitle': 'लेख्नुहोस्। राख्नुहोस्। पछि फर्कनुहोस्।',
     'placeholder': 'तपाईंको मनमा के छ?',
     'submitButton': 'राखिदिनुहोस्',

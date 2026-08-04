@@ -148,7 +148,7 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
     return MaterialApp(
       navigatorKey: _navigatorKey,
       scaffoldMessengerKey: scaffoldMessengerKey,
-      title: 'Abhaya',
+      title: 'Project Abhaya',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       scrollBehavior: const MaterialScrollBehavior().copyWith(
