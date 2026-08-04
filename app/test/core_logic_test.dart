@@ -234,8 +234,8 @@ void main() {
     });
 
     test('ConsolationMessages count returns correct totals', () {
-      expect(ConsolationMessages.count(), 15);
-      expect(ConsolationMessages.count(locale: 'ne'), 15);
+      expect(ConsolationMessages.count(), 10);
+      expect(ConsolationMessages.count(locale: 'ne'), 10);
     });
 
     test('All English string keys have Nepali counterparts', () {

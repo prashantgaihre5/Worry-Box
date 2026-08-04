@@ -19,7 +19,7 @@ class CaptureScreen extends StatefulWidget {
   final StorageService storage;
   final AudioService audio;
   final String locale;
-  final VoidCallback onWorryAdded;
+  final void Function(String) onWorryAdded;
   final VoidCallback onToggleLocale;
   final VoidCallback onToggleDevMode;
 
@@ -57,7 +57,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
     try {
       await widget.storage.addWorry(text);
-      _controller.clear();
+      // Wait for _onSealComplete to clear the controller so we can pass the text
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -71,7 +71,8 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   void _onSealComplete() {
     setState(() => _isSealing = false);
-    widget.onWorryAdded();
+    widget.onWorryAdded(_controller.text);
+    _controller.clear();
   }
 
   @override

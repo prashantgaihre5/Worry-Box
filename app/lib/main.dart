@@ -29,7 +29,7 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
   final AudioService _audio = AudioService();
   late ViewState _currentView;
   late String _locale;
-  bool _showConsolation = false;
+  String? _lastAddedWorryText;
 
   @override
   void initState() {
@@ -65,18 +65,18 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
 
   void _refreshView() {
     final newView = deriveViewState(widget.storage);
-    if (newView != _currentView || _showConsolation) {
+    if (newView != _currentView || _lastAddedWorryText != null) {
       setState(() {
         _currentView = newView;
-        _showConsolation = false;
+        _lastAddedWorryText = null;
       });
     }
   }
 
-  void _onWorryAdded() {
+  void _onWorryAdded(String text) {
     setState(() {
       _currentView = deriveViewState(widget.storage);
-      _showConsolation = true;
+      _lastAddedWorryText = text;
     });
   }
 
@@ -91,17 +91,17 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
   void _toggleDevMode() {
     if (widget.storage.isDevMode) {
       widget.storage.disableDevMode();
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessengerKey.currentState?.showSnackBar(
         const SnackBar(
           content: Text('Dev mode disabled'),
           duration: Duration(seconds: 1),
         ),
       );
     } else {
-      widget.storage.enableDevMode(10);
-      ScaffoldMessenger.of(context).showSnackBar(
+      widget.storage.enableDevMode(60);
+      scaffoldMessengerKey.currentState?.showSnackBar(
         const SnackBar(
-          content: Text('Dev mode enabled — worries unlock in 10 seconds'),
+          content: Text('Dev mode enabled — worries unlock in 1 minute'),
           duration: Duration(seconds: 2),
         ),
       );
@@ -109,9 +109,12 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
     setState(() {});
   }
 
+  static final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: scaffoldMessengerKey,
       title: 'Worry Box',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
@@ -189,9 +192,10 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
       case ViewState.locked:
         return LockedScreen(
           storage: widget.storage,
+          audio: _audio,
           locale: _locale,
           onStateChange: _refreshView,
-          showConsolation: _showConsolation,
+          lastWorryText: _lastAddedWorryText,
         );
       case ViewState.reveal:
         return RevealScreen(

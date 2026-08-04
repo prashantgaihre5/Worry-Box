@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
 import '../l10n/consolation_messages.dart';
+import '../services/audio_service.dart';
 import '../services/storage.dart';
 import '../services/state.dart';
 import '../theme.dart';
@@ -18,16 +19,18 @@ import '../widgets/box_animation.dart';
 /// - Compact secondary input to add more worries
 class LockedScreen extends StatefulWidget {
   final StorageService storage;
+  final AudioService audio;
   final String locale;
   final VoidCallback onStateChange;
-  final bool showConsolation;
+  final String? lastWorryText;
 
   const LockedScreen({
     super.key,
     required this.storage,
+    required this.audio,
     required this.locale,
     required this.onStateChange,
-    this.showConsolation = false,
+    this.lastWorryText,
   });
 
   @override
@@ -48,8 +51,8 @@ class _LockedScreenState extends State<LockedScreen> with WidgetsBindingObserver
     _startTicker();
     _updateCountdown();
 
-    if (widget.showConsolation) {
-      _consolationText = ConsolationMessages.getRandom(locale: widget.locale);
+    if (widget.lastWorryText != null) {
+      _consolationText = ConsolationMessages.getForWorry(widget.lastWorryText!, locale: widget.locale);
       Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted) setState(() => _consolationOpacity = 1.0);
       });
@@ -108,7 +111,7 @@ class _LockedScreenState extends State<LockedScreen> with WidgetsBindingObserver
       await widget.storage.addWorry(text);
       _controller.clear();
       setState(() {
-        _consolationText = ConsolationMessages.getRandom(locale: widget.locale);
+        _consolationText = ConsolationMessages.getForWorry(text, locale: widget.locale);
         _consolationOpacity = 1.0;
       });
       Future.delayed(const Duration(seconds: 4), () {
@@ -228,6 +231,21 @@ class _LockedScreenState extends State<LockedScreen> with WidgetsBindingObserver
               IconButton(
                 onPressed: _addMoreWorry,
                 icon: const Icon(Icons.send_rounded, color: AppColors.accent),
+              ),
+              IconButton(
+                onPressed: () async {
+                  await widget.audio.toggle();
+                  setState(() {});
+                },
+                icon: Icon(
+                  widget.audio.isPlaying
+                      ? Icons.music_off_rounded
+                      : Icons.music_note_rounded,
+                  color: AppColors.accentSoft,
+                ),
+                tooltip: widget.audio.isPlaying
+                    ? AppStrings.get('stopAudio', locale: locale)
+                    : AppStrings.get('playAudio', locale: locale),
               ),
             ],
           ),
