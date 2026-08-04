@@ -207,7 +207,7 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
   }
 }
 
-/// Slow-breathing animated gradient background.
+/// Slow-breathing animated gradient background with Aurora orbs.
 class _AnimatedBackground extends StatefulWidget {
   const _AnimatedBackground();
 
@@ -224,7 +224,7 @@ class _AnimatedBackgroundState extends State<_AnimatedBackground>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 20),
+      duration: const Duration(seconds: 15),
     )..repeat(reverse: true);
   }
 
@@ -236,31 +236,72 @@ class _AnimatedBackgroundState extends State<_AnimatedBackground>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment(
-                0.5 + _controller.value * 0.5,
-                1.0 - _controller.value * 0.3,
+    return Container(
+      color: AppColors.bg0,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          final t = _controller.value;
+          return Stack(
+            children: [
+              // Cyan Orb
+              Positioned(
+                left: -100 + (t * 100),
+                top: -50 - (t * 50),
+                child: Container(
+                  width: 400,
+                  height: 400,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.accent.withValues(alpha: 0.15),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              colors: const [
-                AppColors.bg0,
-                AppColors.bg1,
-                AppColors.bg0,
-              ],
-              stops: [
-                0.0,
-                0.3 + _controller.value * 0.4,
-                1.0,
-              ],
-            ),
-          ),
-        );
-      },
+              // Violet Orb
+              Positioned(
+                right: -150 - (t * 50),
+                bottom: -100 + (t * 150),
+                child: Container(
+                  width: 500,
+                  height: 500,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.accentSoft.withValues(alpha: 0.12),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Optional third deep blue orb in center
+              Positioned(
+                left: MediaQuery.of(context).size.width / 2 - 250,
+                top: MediaQuery.of(context).size.height / 2 - 250 + (t * 100),
+                child: Container(
+                  width: 500,
+                  height: 500,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        AppColors.bg1.withValues(alpha: 0.4),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

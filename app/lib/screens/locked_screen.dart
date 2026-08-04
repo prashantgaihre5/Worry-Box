@@ -7,6 +7,7 @@ import '../services/storage.dart';
 import '../services/state.dart';
 import '../theme.dart';
 import '../widgets/box_animation.dart';
+import '../widgets/glass_card.dart';
 
 /// LOCKED view — shown when pending worries exist and the unlock time hasn't arrived.
 ///
@@ -153,17 +154,43 @@ class _LockedScreenState extends State<LockedScreen> with WidgetsBindingObserver
             textAlign: TextAlign.center,
           ),
 
-          const SizedBox(height: AppSpacing.sp4),
+          const SizedBox(height: AppSpacing.sp8),
 
           // ── Countdown ──
           if (_countdown.isNotEmpty)
-            Text(
-              AppStrings.format('lockedCountdown', {'time': _countdown}, locale: locale),
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: AppColors.accent,
-                    fontFeatures: [const FontFeature.tabularFigures()],
+            AnimatedContainer(
+              duration: const Duration(seconds: 1),
+              curve: Curves.easeInOut,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accent.withValues(alpha: 0.2),
+                    blurRadius: 40,
+                    spreadRadius: 10,
+                  )
+                ],
+              ),
+              child: GlassCard(
+                borderRadius: 100,
+                padding: const EdgeInsets.all(AppSpacing.sp8),
+                child: Center(
+                  child: Column(
+                    children: [
+                      const Icon(Icons.lock_outline_rounded, color: AppColors.accent, size: 32),
+                      const SizedBox(height: AppSpacing.sp2),
+                      Text(
+                        _countdown,
+                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                              color: AppColors.text,
+                              fontFeatures: [const FontFeature.tabularFigures()],
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-              textAlign: TextAlign.center,
+                ),
+              ),
             ),
 
           const SizedBox(height: AppSpacing.sp3),
@@ -185,46 +212,55 @@ class _LockedScreenState extends State<LockedScreen> with WidgetsBindingObserver
             opacity: _consolationOpacity,
             duration: AppDurations.base,
             child: _consolationText.isNotEmpty
-                ? Container(
+                ? GlassCard(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.sp4,
-                      vertical: AppSpacing.sp3,
+                      vertical: AppSpacing.sp4,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentSoft.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(AppShape.radiusSm),
-                    ),
-                    child: Text(
-                      _consolationText,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.accentSoft,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.auto_awesome_rounded, color: AppColors.accentSoft),
+                        const SizedBox(width: AppSpacing.sp3),
+                        Expanded(
+                          child: Text(
+                            _consolationText,
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: AppColors.accentSoft,
+                                ),
                           ),
-                      textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   )
                 : const SizedBox.shrink(),
           ),
 
-          const SizedBox(height: AppSpacing.sp8),
+          const SizedBox(height: AppSpacing.sp12),
 
-          // ── Secondary input ──
+          // ── Quick add (secondary input) ──
           Text(
-            AppStrings.get('lockedSubInput', locale: locale),
+            AppStrings.get('lockedAddMore', locale: locale),
             style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.sp2),
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _controller,
-                  maxLength: 280,
-                  decoration: InputDecoration(
-                    hintText: AppStrings.get('placeholder', locale: locale),
-                    counterText: '',
-                    isDense: true,
+                child: GlassCard(
+                  isFocused: _controller.text.isNotEmpty,
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sp3),
+                  child: TextField(
+                    controller: _controller,
+                    maxLength: 280,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: AppStrings.get('placeholder', locale: locale),
+                      counterText: '',
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _addMoreWorry(),
                   ),
-                  onSubmitted: (_) => _addMoreWorry(),
                 ),
               ),
               const SizedBox(width: AppSpacing.sp2),

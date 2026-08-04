@@ -4,6 +4,7 @@ import '../services/storage.dart';
 import '../services/audio_service.dart';
 import '../theme.dart';
 import '../widgets/box_animation.dart';
+import '../widgets/glass_card.dart';
 
 /// CAPTURE view — the default state when no worries are pending.
 ///
@@ -133,29 +134,55 @@ class _CaptureScreenState extends State<CaptureScreen> {
           const SizedBox(height: AppSpacing.sp8),
 
           // ── Text input ──
-          TextField(
-            controller: _controller,
-            maxLines: 3,
-            maxLength: 280,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: AppStrings.get('placeholder', locale: _locale),
-              counterText: _controller.text.length > 240
-                  ? '${_controller.text.length}/280'
-                  : '',
+          GlassCard(
+            isFocused: _controller.text.isNotEmpty,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sp4,
+              vertical: AppSpacing.sp2,
+            ),
+            child: TextField(
+              controller: _controller,
+              maxLines: 4,
+              maxLength: 280,
+              onChanged: (_) => setState(() {}),
+              style: Theme.of(context).textTheme.bodyLarge,
+              decoration: InputDecoration(
+                hintText: AppStrings.get('placeholder', locale: _locale),
+                counterText: _controller.text.length > 240
+                    ? '${_controller.text.length}/280'
+                    : '',
+              ),
             ),
           ),
 
-          const SizedBox(height: AppSpacing.sp4),
+          const SizedBox(height: AppSpacing.sp6),
 
           // ── Action buttons row ──
           Row(
             children: [
               // Put it away
               Expanded(
-                child: ElevatedButton(
-                  onPressed: _controller.text.trim().isEmpty ? null : _submitWorry,
-                  child: Text(AppStrings.get('submitButton', locale: _locale)),
+                child: AnimatedContainer(
+                  duration: AppDurations.fast,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppShape.radius),
+                    boxShadow: _controller.text.trim().isNotEmpty
+                        ? [
+                            BoxShadow(
+                              color: AppColors.accent.withValues(alpha: 0.3),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            )
+                          ]
+                        : [],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _controller.text.trim().isEmpty ? null : _submitWorry,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sp2),
+                      child: Text(AppStrings.get('submitButton', locale: _locale)),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sp3),

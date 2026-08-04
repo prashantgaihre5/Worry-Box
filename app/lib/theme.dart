@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens from SPEC.md §7.
-/// All colors, text styles, and shapes are defined here.
+/// Advanced Premium Dark Theme Tokens
 class AppColors {
-  static const bg0 = Color(0xFF0B1020);
-  static const bg1 = Color(0xFF151D3B);
+  // Deep space/aurora backgrounds
+  static const bg0 = Color(0xFF03050F);
+  static const bg1 = Color(0xFF0A0F2C);
+  
+  // Glassmorphic surfaces
   static const surface = Color(0x0FFFFFFF);       // 6% white
-  static const surfaceStrong = Color(0x1AFFFFFF);  // 10% white
-  static const border = Color(0x1FFFFFFF);         // 12% white
-  static const text = Color(0xFFEAEEF7);
-  static const textMuted = Color(0xFF97A3C4);
-  static const accent = Color(0xFF7C9CF5);
-  static const accentSoft = Color(0xFF8FD9C2);
-  static const error = Color(0xFFFF6B6B);
+  static const surfaceStrong = Color(0x15FFFFFF);  // 8% white
+  static const glassBorder = Color(0x20FFFFFF);    // 12% white for glass edges
+  static const border = Color(0x1AFFFFFF);
+  
+  // Text
+  static const text = Color(0xFFF0F4FA);
+  static const textMuted = Color(0xFF8B9CB6);
+  
+  // Neon / Aurora accents
+  static const accent = Color(0xFF00D4FF);        // Glowing Cyan
+  static const accentSoft = Color(0xFFB570FF);    // Soft Violet/Pink
+  
+  static const error = Color(0xFFFF5252);
 }
 
 /// Spacing scale (4px base).
@@ -28,57 +36,60 @@ class AppSpacing {
 
 /// Shape constants.
 class AppShape {
-  static const double radius = 16;
-  static const double radiusSm = 10;
-  static const double blur = 14;
+  static const double radius = 24;
+  static const double radiusSm = 12;
+  static const double blur = 24; // Deeper blur for premium glass
 }
 
 /// Duration constants for animations.
 class AppDurations {
-  static const fast = Duration(milliseconds: 180);
-  static const base = Duration(milliseconds: 400);
-  static const seal = Duration(milliseconds: 700);
+  static const fast = Duration(milliseconds: 200);
+  static const base = Duration(milliseconds: 500);
+  static const seal = Duration(milliseconds: 800);
 }
 
 /// Curves for animations.
 class AppCurves {
-  static const easeOut = Curves.easeOutCubic;
-  static const seal = Curves.easeInOutCubic;
+  static const easeOut = Curves.easeOutCirc;
+  static const seal = Curves.easeInOutQuart;
 }
 
 /// Builds the app-wide ThemeData.
 ThemeData buildAppTheme() {
   return ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: Colors.transparent,
+    scaffoldBackgroundColor: Colors.transparent, // Background rendered by Aurora
     fontFamily: 'Inter',
     colorScheme: const ColorScheme.dark(
       primary: AppColors.accent,
       secondary: AppColors.accentSoft,
-      surface: AppColors.bg1,
+      surface: AppColors.surface,
       error: AppColors.error,
     ),
     textTheme: const TextTheme(
       headlineLarge: TextStyle(
-        fontSize: 28,
+        fontSize: 32,
+        fontWeight: FontWeight.w800,
+        color: AppColors.text,
+        letterSpacing: -1.0,
+      ),
+      headlineMedium: TextStyle(
+        fontSize: 24,
         fontWeight: FontWeight.w700,
         color: AppColors.text,
         letterSpacing: -0.5,
       ),
-      headlineMedium: TextStyle(
-        fontSize: 22,
-        fontWeight: FontWeight.w600,
-        color: AppColors.text,
-      ),
       bodyLarge: TextStyle(
         fontSize: 16,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.w500,
         color: AppColors.text,
+        height: 1.5,
       ),
       bodyMedium: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: AppColors.textMuted,
+        height: 1.4,
       ),
       labelLarge: TextStyle(
         fontSize: 16,
@@ -88,8 +99,9 @@ ThemeData buildAppTheme() {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.accent,
+        backgroundColor: AppColors.text,
         foregroundColor: AppColors.bg0,
+        elevation: 0,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.sp8,
           vertical: AppSpacing.sp4,
@@ -99,26 +111,18 @@ ThemeData buildAppTheme() {
         ),
         textStyle: const TextStyle(
           fontSize: 16,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
         ),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.surfaceStrong,
+      fillColor: Colors.transparent, // Controlled by GlassCard instead
       hintStyle: const TextStyle(color: AppColors.textMuted),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppShape.radiusSm),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppShape.radiusSm),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppShape.radiusSm),
-        borderSide: const BorderSide(color: AppColors.accent, width: 2),
-      ),
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
       contentPadding: const EdgeInsets.all(AppSpacing.sp4),
     ),
   );

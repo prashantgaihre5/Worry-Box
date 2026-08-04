@@ -3,6 +3,7 @@ import '../l10n/app_strings.dart';
 import '../models/worry.dart';
 import '../services/storage.dart';
 import '../theme.dart';
+import '../widgets/glass_card.dart';
 
 /// REVEAL view — shown when one or more worries have passed their unlock time.
 ///
@@ -165,17 +166,13 @@ class _WorryCardState extends State<_WorryCard>
       child: AnimatedOpacity(
         duration: AppDurations.base,
         opacity: _opacity,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: AppSpacing.sp4),
-          padding: const EdgeInsets.all(AppSpacing.sp4),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceStrong,
-            borderRadius: BorderRadius.circular(AppShape.radius),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sp4),
+          child: GlassCard(
+            padding: const EdgeInsets.all(AppSpacing.sp4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // ── Worry text ──
               Text(
                 widget.worry.text,
