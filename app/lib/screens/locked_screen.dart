@@ -1,28 +1,19 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
-import '../l10n/consolation_messages.dart';
-import '../services/audio_service.dart';
+import '../models/worry.dart';
 import '../services/storage.dart';
-import '../services/state.dart';
+import '../services/audio_service.dart';
 import '../theme.dart';
 import '../widgets/box_animation.dart';
+import 'dart:ui'; // for FontFeature
 
-/// LOCKED view — shown when pending worries exist and the unlock time hasn't arrived.
-///
-/// Contains:
-/// - Box illustration (lid closed, padlock)
-/// - "Your thoughts are safe." headline
-/// - Live countdown
-/// - Worry count
-/// - Consolation message (fades after a few seconds)
-/// - Compact secondary input to add more worries
 class LockedScreen extends StatefulWidget {
   final StorageService storage;
   final AudioService audio;
   final String locale;
   final VoidCallback onStateChange;
-  final String? lastWorryText;
+  final String lastWorryText; // Legacy var from previous routing, keep for API compat
 
   const LockedScreen({
     super.key,
@@ -30,94 +21,58 @@ class LockedScreen extends StatefulWidget {
     required this.audio,
     required this.locale,
     required this.onStateChange,
-    this.lastWorryText,
+    required this.lastWorryText,
   });
 
   @override
   State<LockedScreen> createState() => _LockedScreenState();
 }
 
-class _LockedScreenState extends State<LockedScreen> with WidgetsBindingObserver {
+class _LockedScreenState extends State<LockedScreen> {
   Timer? _ticker;
-  String _countdown = '';
-  final _controller = TextEditingController();
-  double _consolationOpacity = 0.0;
-  String _consolationText = '';
+  final _titleController = TextEditingController();
+  final _descController = TextEditingController();
+  
+  static const List<_DurationOption> _durationOptions = [
+    _DurationOption('1m', 60),
+    _DurationOption('5m', 300),
+    _DurationOption('15m', 900),
+    _DurationOption('1h', 3600),
+    _DurationOption('3h', 10800),
+    _DurationOption('12h', 43200),
+  ];
+  int _selectedDuration = 300;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _startTicker();
-    _updateCountdown();
-
-    if (widget.lastWorryText != null) {
-      _consolationText = ConsolationMessages.getForWorry(widget.lastWorryText!, locale: widget.locale);
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) setState(() => _consolationOpacity = 1.0);
-      });
-      Future.delayed(const Duration(seconds: 4), () {
-        if (mounted) setState(() => _consolationOpacity = 0.0);
-      });
-    }
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
-    _controller.dispose();
+    _titleController.dispose();
+    _descController.dispose();
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _updateCountdown();
-      // Re-derive view state in case unlock time passed while backgrounded
-      final newState = deriveViewState(widget.storage);
-      if (newState != ViewState.locked) {
-        widget.onStateChange();
-      }
-    }
-  }
-
-  void _startTicker() {
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      _updateCountdown();
-      // Check if we should transition to REVEAL
-      final newState = deriveViewState(widget.storage);
-      if (newState != ViewState.locked) {
-        _ticker?.cancel();
-        widget.onStateChange();
-      }
-    });
-  }
-
-  void _updateCountdown() {
-    final nextUnlock = widget.storage.nextUnlockAt();
-    if (nextUnlock == null) {
-      setState(() => _countdown = '');
-      return;
-    }
-    setState(() => _countdown = formatCountdown(nextUnlock));
-  }
-
-  Future<void> _addMoreWorry() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
+  Future<void> _submitWorry() async {
+    final title = _titleController.text.trim();
+    final desc = _descController.text.trim();
+    if (title.isEmpty) return;
 
     try {
-      await widget.storage.addWorry(text);
-      _controller.clear();
-      setState(() {
-        _consolationText = ConsolationMessages.getForWorry(text, locale: widget.locale);
-        _consolationOpacity = 1.0;
-      });
-      Future.delayed(const Duration(seconds: 4), () {
-        if (mounted) setState(() => _consolationOpacity = 0.0);
-      });
-      _updateCountdown();
+      await widget.storage.addWorryWithDuration(
+        title: title,
+        description: desc,
+        durationSeconds: _selectedDuration,
+      );
+      _titleController.clear();
+      _descController.clear();
+      FocusScope.of(context).unfocus();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -127,128 +82,412 @@ class _LockedScreenState extends State<LockedScreen> with WidgetsBindingObserver
     }
   }
 
+  void _toggleImportant(Worry worry) {
+    if (worry.isImportant) {
+      widget.storage.unmarkImportant(worry.id);
+    } else {
+      widget.storage.markImportant(worry.id);
+    }
+    setState(() {});
+  }
+
+  void _removeWorry(String id) {
+    widget.storage.removeWorry(id);
+    setState(() {});
+    
+    // Check if we need to return to capture screen
+    if (widget.storage.getWorries().where((w) => w.status != 'released').isEmpty) {
+      widget.onStateChange();
+    }
+  }
+
+  String _formatRemainingTime(Worry worry) {
+    final remaining = worry.unlockAt - DateTime.now().millisecondsSinceEpoch;
+    if (remaining <= 0) return 'Unlocked';
+    final duration = Duration(milliseconds: remaining);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes % 60;
+    final seconds = duration.inSeconds % 60;
+    if (hours > 0) return '${hours}h ${minutes}m left';
+    if (minutes > 0) return '${minutes}m ${seconds}s left';
+    return '${seconds}s left';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final pendingCount = widget.storage.getPendingWorries().length;
-    final locale = widget.locale;
+    final worries = widget.storage.getWorries()
+        .where((w) => w.status != 'released')
+        .toList();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sp6,
-        vertical: AppSpacing.sp8,
-      ),
+    return SafeArea(
       child: Column(
         children: [
-          const SizedBox(height: AppSpacing.sp12),
-
-          // ── Box (closed) ──
-          const BoxAnimation(isOpen: false),
-
-          const SizedBox(height: AppSpacing.sp8),
-
-          // ── Headline ──
-          Text(
-            AppStrings.get('lockedHeadline', locale: locale),
-            style: Theme.of(context).textTheme.headlineMedium,
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: AppSpacing.sp4),
-
-          // ── Countdown ──
-          if (_countdown.isNotEmpty)
-            Text(
-              AppStrings.format('lockedCountdown', {'time': _countdown}, locale: locale),
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: AppColors.accent,
-                    fontFeatures: [const FontFeature.tabularFigures()],
-                  ),
-              textAlign: TextAlign.center,
+          // ── Compact Input Form ──
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sp4, vertical: AppSpacing.sp3),
+            decoration: BoxDecoration(
+              color: AppColors.bg0,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.add_circle_outline, size: 16, color: AppColors.accent),
+                    const SizedBox(width: AppSpacing.sp2),
+                    Text(
+                      'Add another problem',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.text,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sp2),
+                
+                // Compact Text Fields
+                TextField(
+                  controller: _titleController,
+                  maxLength: 100,
+                  onChanged: (_) => setState(() {}),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    hintText: 'Title...',
+                    counterText: '',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sp2),
+                TextField(
+                  controller: _descController,
+                  maxLines: 2,
+                  maxLength: 500,
+                  onChanged: (_) => setState(() {}),
+                  style: const TextStyle(fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Description...',
+                    counterText: '',
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sp3),
+                
+                // Compact Timer & Submit Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _durationOptions.map((option) {
+                            final isSelected = _selectedDuration == option.seconds;
+                            return GestureDetector(
+                              onTap: () => setState(() => _selectedDuration = option.seconds),
+                              child: AnimatedContainer(
+                                duration: AppDurations.fast,
+                                margin: const EdgeInsets.only(right: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? AppColors.accent.withValues(alpha: 0.2) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: isSelected ? AppColors.accent : AppColors.border,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  option.label,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                    color: isSelected ? AppColors.accent : AppColors.textMuted,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sp2),
+                    ElevatedButton(
+                      onPressed: _titleController.text.trim().isEmpty ? null : _submitWorry,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Add', style: TextStyle(fontSize: 13)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // ── Worry Cards List ──
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(AppSpacing.sp4),
+              itemCount: worries.length,
+              itemBuilder: (context, index) {
+                final worry = worries[index];
+                return _WorryCard(
+                  key: ValueKey(worry.id),
+                  worry: worry,
+                  remainingTime: _formatRemainingTime(worry),
+                  onToggleImportant: () => _toggleImportant(worry),
+                  onRemove: () => _removeWorry(worry.id),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-          const SizedBox(height: AppSpacing.sp3),
+class _DurationOption {
+  final String label;
+  final int seconds;
+  const _DurationOption(this.label, this.seconds);
+}
 
-          // ── Worry count ──
-          Text(
-            pendingCount == 1
-                ? AppStrings.get('lockedCountSingular', locale: locale)
-                : AppStrings.format(
-                    'lockedCount', {'count': '$pendingCount'},
-                    locale: locale),
-            style: Theme.of(context).textTheme.bodyMedium,
+class _WorryCard extends StatefulWidget {
+  final Worry worry;
+  final String remainingTime;
+  final VoidCallback onToggleImportant;
+  final VoidCallback onRemove;
+
+  const _WorryCard({
+    super.key,
+    required this.worry,
+    required this.remainingTime,
+    required this.onToggleImportant,
+    required this.onRemove,
+  });
+
+  @override
+  State<_WorryCard> createState() => _WorryCardState();
+}
+
+class _WorryCardState extends State<_WorryCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isUnlocked = widget.remainingTime == 'Unlocked';
+    final isImportant = widget.worry.isImportant;
+
+    if (!isUnlocked && _isExpanded) {
+      _isExpanded = false;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sp3),
+      padding: const EdgeInsets.all(AppSpacing.sp3),
+      decoration: BoxDecoration(
+        color: isImportant
+            ? AppColors.accent.withValues(alpha: 0.08)
+            : AppColors.surfaceStrong,
+        borderRadius: BorderRadius.circular(AppShape.radius),
+        border: Border.all(
+          color: isImportant
+              ? AppColors.accent.withValues(alpha: 0.4)
+              : AppColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 60,
+                height: 60,
+                child: BoxAnimation(
+                  isOpen: _isExpanded,
+                  isSealing: false,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sp3),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sp1),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.worry.title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      if (isImportant) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.flag_rounded,
+                                  size: 10, color: AppColors.accent),
+                              SizedBox(width: 4),
+                              Text(
+                                'Important',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.accent,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              if (!isUnlocked)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sp1),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.lock_rounded,
+                        size: 14,
+                        color: AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.remainingTime,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                IconButton(
+                  onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                  icon: Icon(
+                    _isExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                    color: AppColors.accent,
+                  ),
+                  tooltip: _isExpanded ? 'Hide description' : 'Show description',
+                ),
+            ],
           ),
 
-          const SizedBox(height: AppSpacing.sp6),
-
-          // ── Consolation message ──
-          AnimatedOpacity(
-            opacity: _consolationOpacity,
+          AnimatedSize(
             duration: AppDurations.base,
-            child: _consolationText.isNotEmpty
-                ? Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sp4,
-                      vertical: AppSpacing.sp3,
+            curve: Curves.easeInOut,
+            child: _isExpanded && widget.worry.text.isNotEmpty
+                ? Padding(
+                    padding: const EdgeInsets.only(
+                      top: AppSpacing.sp3,
+                      left: AppSpacing.sp1,
+                      right: AppSpacing.sp1,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentSoft.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(AppShape.radiusSm),
-                    ),
-                    child: Text(
-                      _consolationText,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.accentSoft,
-                          ),
-                      textAlign: TextAlign.center,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.sp3),
+                      decoration: BoxDecoration(
+                        color: AppColors.bg0.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(AppShape.radiusSm),
+                      ),
+                      child: Text(
+                        widget.worry.text,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.text,
+                          height: 1.4,
+                        ),
+                      ),
                     ),
                   )
                 : const SizedBox.shrink(),
           ),
 
-          const SizedBox(height: AppSpacing.sp8),
-
-          // ── Secondary input ──
-          Text(
-            AppStrings.get('lockedSubInput', locale: locale),
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: AppSpacing.sp2),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  maxLength: 280,
-                  decoration: InputDecoration(
-                    hintText: AppStrings.get('placeholder', locale: locale),
-                    counterText: '',
-                    isDense: true,
+          if (isUnlocked) ...[
+            const SizedBox(height: AppSpacing.sp2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: AppSpacing.sp1),
+                  child: Text(
+                    widget.worry.relativeTime,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textMuted),
                   ),
-                  onSubmitted: (_) => _addMoreWorry(),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sp2),
-              IconButton(
-                onPressed: _addMoreWorry,
-                icon: const Icon(Icons.send_rounded, color: AppColors.accent),
-              ),
-              IconButton(
-                onPressed: () async {
-                  await widget.audio.toggle();
-                  setState(() {});
-                },
-                icon: Icon(
-                  widget.audio.isPlaying
-                      ? Icons.music_off_rounded
-                      : Icons.music_note_rounded,
-                  color: AppColors.accentSoft,
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: widget.onToggleImportant,
+                      icon: Icon(
+                        isImportant ? Icons.flag_rounded : Icons.flag_outlined,
+                        size: 16,
+                        color: isImportant
+                            ? AppColors.accent
+                            : AppColors.textMuted,
+                      ),
+                      label: Text(
+                        isImportant ? 'Important' : 'Mark',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isImportant
+                              ? AppColors.accent
+                              : AppColors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sp1),
+                    TextButton.icon(
+                      onPressed: widget.onRemove,
+                      icon: const Icon(Icons.close_rounded,
+                          size: 16, color: AppColors.error),
+                      label: const Text(
+                        'Remove',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                tooltip: widget.audio.isPlaying
-                    ? AppStrings.get('stopAudio', locale: locale)
-                    : AppStrings.get('playAudio', locale: locale),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );
