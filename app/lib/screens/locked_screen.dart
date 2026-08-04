@@ -415,14 +415,30 @@ class _WorryCardState extends State<_WorryCard> {
               ],
             ),
             if (isTimerEnded)
-              ElevatedButton.icon(
-                onPressed: widget.onOpenBox,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: AppColors.bg0,
-                ),
-                icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                label: const Text('Open Bin'),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => _showAddTimeDialog(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      foregroundColor: AppColors.text,
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    child: const Text('Keep Locked', style: TextStyle(fontSize: 12)),
+                  ),
+                  const SizedBox(width: AppSpacing.sp2),
+                  ElevatedButton.icon(
+                    onPressed: widget.onOpenBox,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.bg0,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                    label: const Text('Open Bin', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
               )
             else
               Text(
