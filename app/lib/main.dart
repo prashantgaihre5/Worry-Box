@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'theme.dart';
 import 'services/storage.dart';
 import 'services/audio_service.dart';
@@ -8,9 +7,6 @@ import 'screens/capture_screen.dart';
 import 'screens/locked_screen.dart';
 import 'screens/reveal_screen.dart';
 import 'screens/bookmarks_screen.dart';
-import 'screens/meditation_screen.dart';
-import 'screens/archive_screen.dart';
-import 'screens/analytics_screen.dart';
 import 'widgets/animated_background.dart';
 import 'widgets/expired_bookmarks_banner.dart';
 import 'l10n/app_strings.dart';
@@ -141,17 +137,9 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return MaterialApp(
       scaffoldMessengerKey: scaffoldMessengerKey,
-      title: 'Abhaya',
+      title: 'Worry Box',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      scrollBehavior: const MaterialScrollBehavior().copyWith(
-        dragDevices: {
-          PointerDeviceKind.mouse,
-          PointerDeviceKind.touch,
-          PointerDeviceKind.stylus,
-          PointerDeviceKind.trackpad,
-        },
-      ),
       home: Scaffold(
         body: Stack(
           children: [
@@ -172,57 +160,80 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             // Logo
-                            Row(
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.glassPanelBg,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: AppColors.glassPanelBorder),
+                            Flexible(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.glassPanelBg,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: AppColors.glassPanelBorder),
+                                    ),
+                                    child: const Icon(Icons.layers, color: AppColors.accentSoft, size: 16),
                                   ),
-                                  child: const Icon(Icons.layers, color: AppColors.accentSoft, size: 16),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  AppStrings.get('appTitle', locale: _locale),
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
+                                  const SizedBox(width: 10),
+                                  const Flexible(
+                                    child: Text(
+                                      'Worry Box',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                             // Actions
                             Row(
                               children: [
-                                // Language
+                                // Audio
+                                GestureDetector(
+                                  onTap: () async {
+                                    await _audio.toggle();
+                                    setState(() {});
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: _audio.isPlaying ? AppColors.accent.withValues(alpha: 0.25) : AppColors.glassPanelBg,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: _audio.isPlaying ? AppColors.accent.withValues(alpha: 0.5) : AppColors.glassPanelBorder,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      _audio.isPlaying ? Icons.volume_up : Icons.volume_off,
+                                      size: 16,
+                                      color: _audio.isPlaying ? AppColors.accentSoft : AppColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Language — icon only to save space
                                 GestureDetector(
                                   onTap: _toggleLocale,
                                   child: Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
                                       color: AppColors.glassPanelBg,
-                                      borderRadius: BorderRadius.circular(20),
+                                      shape: BoxShape.circle,
                                       border: Border.all(color: AppColors.glassPanelBorder),
                                     ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.language, size: 16, color: AppColors.accentSoft),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          _locale,
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
-                                            color: AppColors.accentSoft,
-                                            letterSpacing: 1.0,
-                                          ),
-                                        ),
-                                      ],
+                                    child: Text(
+                                      _locale.toUpperCase(),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.accentSoft,
+                                        letterSpacing: 0.5,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -274,26 +285,6 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
                                           Icon(Icons.bookmark_border, size: 16, color: AppColors.accentSoft),
                                           SizedBox(width: 8),
                                           Text('Bookmarks', style: TextStyle(color: Colors.white, fontSize: 13)),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'archive',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.history, size: 16, color: AppColors.accentSoft),
-                                          SizedBox(width: 8),
-                                          Text('Archive', style: TextStyle(color: Colors.white, fontSize: 13)),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: 'analytics',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.bar_chart, size: 16, color: AppColors.accentSoft),
-                                          SizedBox(width: 8),
-                                          Text('Analytics', style: TextStyle(color: Colors.white, fontSize: 13)),
                                         ],
                                       ),
                                     ),
@@ -371,19 +362,23 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
 
   Widget _buildSectionContent() {
     if (_activeSection == 'meditation') {
-      return KeyedSubtree(
+      return Center(
         key: const ValueKey('meditation'),
-        child: MeditationScreen(
-          audio: _audio,
-        ),
-      );
-    }
-
-    if (_activeSection == 'archive') {
-      return KeyedSubtree(
-        key: const ValueKey('archive'),
-        child: ArchiveScreen(
-          storage: widget.storage,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.self_improvement, size: 48, color: AppColors.accentSoft),
+            const SizedBox(height: 16),
+            const Text(
+              'Meditation Area',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Coming soon...',
+              style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.5)),
+            ),
+          ],
         ),
       );
     }
@@ -392,16 +387,6 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
       return KeyedSubtree(
         key: const ValueKey('bookmarks'),
         child: BookmarksScreen(
-          storage: widget.storage,
-          locale: _locale,
-        ),
-      );
-    }
-
-    if (_activeSection == 'analytics') {
-      return KeyedSubtree(
-        key: const ValueKey('analytics'),
-        child: AnalyticsScreen(
           storage: widget.storage,
           locale: _locale,
         ),
