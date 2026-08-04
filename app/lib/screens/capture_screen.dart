@@ -4,6 +4,7 @@ import '../services/storage.dart';
 import '../services/audio_service.dart';
 import '../widgets/stress_graph.dart';
 import '../theme.dart';
+import '../widgets/glass_card.dart';
 import '../widgets/box_animation.dart';
 
 class CaptureScreen extends StatefulWidget {
@@ -83,7 +84,7 @@ class _CaptureScreenState extends State<CaptureScreen> with SingleTickerProvider
   Future<void> _submitWorry() async {
     final title = _titleController.text.trim();
     final desc = _descController.text.trim();
-    if (title.isEmpty) return;
+    if (title.isEmpty && desc.isEmpty) return;
     
     // Start the drop animation
     await _dropController.forward();
@@ -280,39 +281,44 @@ class _CaptureScreenState extends State<CaptureScreen> with SingleTickerProvider
 
           const SizedBox(height: AppSpacing.sp4),
 
-          // Action Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: AppColors.bg1,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppShape.radiusSm),
-                  side: const BorderSide(color: AppColors.border),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: AppColors.bg1,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppShape.radiusSm),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                  ),
+                  onPressed:
+                      (_titleController.text.trim().isEmpty && _descController.text.trim().isEmpty) ? null : _submitWorry,
+                  icon: const Icon(Icons.lock_outline, size: 18),
+                  label: Text(AppStrings.get('submitButton', locale: _locale)),
                 ),
               ),
-              onPressed: _titleController.text.trim().isEmpty ? null : _submitWorry,
-              icon: const Icon(Icons.lock_outline, size: 18),
-              label: const Text('Put it away'),
-            ),
-          ),
-          
-          const SizedBox(height: AppSpacing.sp4),
-
-          // Suggestion Pills
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('+ example:', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-              const SizedBox(width: 8),
-              _buildPill('presentation'),
-              const SizedBox(width: 8),
-              _buildPill('comparison'),
+              const SizedBox(width: AppSpacing.sp3),
+              IconButton(
+                onPressed: () async {
+                  await widget.audio.toggle();
+                  setState(() {});
+                },
+                icon: Icon(
+                  widget.audio.isPlaying
+                      ? Icons.music_off_rounded
+                      : Icons.music_note_rounded,
+                  color: AppColors.accentSoft,
+                ),
+                tooltip: widget.audio.isPlaying
+                    ? AppStrings.get('stopAudio', locale: _locale)
+                    : AppStrings.get('playAudio', locale: _locale),
+              ),
             ],
           ),
-
+          
           const SizedBox(height: AppSpacing.sp8),
 
           Text(

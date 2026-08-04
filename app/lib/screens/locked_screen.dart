@@ -7,11 +7,9 @@ import '../services/audio_service.dart';
 import '../theme.dart';
 import '../widgets/box_animation.dart';
 import '../widgets/particle_burst.dart';
-<<<<<<< HEAD
 import '../widgets/glass_card.dart';
-=======
 import '../widgets/stress_graph.dart';
->>>>>>> 75db49e (feat: real-time Stress Analytics graph tracking let go and important worries)
+import 'package:intl/intl.dart';
 import 'dart:ui'; // for FontFeature
 
 class LockedScreen extends StatefulWidget {
@@ -426,7 +424,6 @@ class _WorryCardState extends State<_WorryCard> {
                 ),
             ],
           ),
-        ),
       );
     }
 
@@ -463,11 +460,14 @@ class _WorryCardState extends State<_WorryCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.worry.title,
-                          style: const TextStyle(
+                          widget.worry.title.isNotEmpty
+                              ? widget.worry.title
+                              : DateFormat('MMM d, yyyy h:mm a').format(DateTime.fromMillisecondsSinceEpoch(widget.worry.createdAt)),
+                          style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.text,
+                            fontWeight: widget.worry.title.isNotEmpty ? FontWeight.w600 : FontWeight.w400,
+                            color: widget.worry.title.isNotEmpty ? AppColors.text : AppColors.textMuted,
+                            fontStyle: widget.worry.title.isNotEmpty ? FontStyle.normal : FontStyle.italic,
                           ),
                         ),
                         if (isImportant) ...[
