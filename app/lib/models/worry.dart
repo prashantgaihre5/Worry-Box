@@ -8,7 +8,7 @@ class Worry {
   final String title;
   final String text; // description
   final int createdAt;
-  final int unlockAt;
+  int unlockAt;
   String status; // "locked" | "revealed" | "released" | "kept"
   bool isImportant;
 
