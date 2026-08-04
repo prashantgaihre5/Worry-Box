@@ -21,6 +21,7 @@ class LockedScreen extends StatefulWidget {
   final String locale;
   final VoidCallback onStateChange;
   final bool showConsolation;
+  final bool devMode;
 
   const LockedScreen({
     super.key,
@@ -28,6 +29,7 @@ class LockedScreen extends StatefulWidget {
     required this.locale,
     required this.onStateChange,
     this.showConsolation = false,
+    this.devMode = false,
   });
 
   @override
@@ -105,7 +107,10 @@ class _LockedScreenState extends State<LockedScreen> with WidgetsBindingObserver
     if (text.isEmpty) return;
 
     try {
-      await widget.storage.addWorry(text);
+      await widget.storage.addWorry(
+        text,
+        devUnlockSeconds: widget.devMode ? 10 : null,
+      );
       _controller.clear();
       setState(() {
         _consolationText = ConsolationMessages.getRandom(locale: widget.locale);

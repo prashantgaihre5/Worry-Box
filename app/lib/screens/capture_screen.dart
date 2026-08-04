@@ -21,6 +21,7 @@ class CaptureScreen extends StatefulWidget {
   final String locale;
   final VoidCallback onWorryAdded;
   final VoidCallback onToggleLocale;
+  final bool devMode;
 
   const CaptureScreen({
     super.key,
@@ -29,6 +30,7 @@ class CaptureScreen extends StatefulWidget {
     required this.locale,
     required this.onWorryAdded,
     required this.onToggleLocale,
+    this.devMode = false,
   });
 
   @override
@@ -54,7 +56,10 @@ class _CaptureScreenState extends State<CaptureScreen> {
     setState(() => _isSealing = true);
 
     try {
-      await widget.storage.addWorry(text);
+      await widget.storage.addWorry(
+        text,
+        devUnlockSeconds: widget.devMode ? 10 : null,
+      );
       _controller.clear();
     } catch (e) {
       if (mounted) {
@@ -86,10 +91,30 @@ class _CaptureScreenState extends State<CaptureScreen> {
       ),
       child: Column(
         children: [
-          // ── Header row: Language toggle ──
+          // ── Header row: Dev badge + Language toggle ──
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (widget.devMode)
+                Container(
+                  margin: const EdgeInsets.only(right: AppSpacing.sp2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sp2,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentSoft.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    AppStrings.get('devModeBadge', locale: _locale),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.accentSoft,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               TextButton(
                 onPressed: widget.onToggleLocale,
                 child: Text(

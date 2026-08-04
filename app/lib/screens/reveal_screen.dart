@@ -8,8 +8,8 @@ import '../theme.dart';
 ///
 /// Contains:
 /// - "The box is open." headline
-/// - List of unlocked worry cards with "Let go" and "Keep" buttons
-/// - Animations on release (fade + translate up)
+/// - AnimatedList of unlocked worry cards with "Let go" and "Keep" buttons
+/// - SizeTransition + FadeTransition removal animations (per SPEC.md §7)
 /// - "All clear" state when list empties
 class RevealScreen extends StatefulWidget {
   final StorageService storage;
@@ -28,7 +28,8 @@ class RevealScreen extends StatefulWidget {
 }
 
 class _RevealScreenState extends State<RevealScreen> {
-  List<Worry> _worries = [];
+  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  late List<Worry> _worries;
 
   @override
   void initState() {
@@ -44,19 +45,120 @@ class _RevealScreenState extends State<RevealScreen> {
         widget.storage.markRevealed(w.id);
       }
     }
-    setState(() => _worries = widget.storage.getUnlockedWorries());
+    _worries = widget.storage.getUnlockedWorries();
   }
 
-  Future<void> _release(String id) async {
-    await widget.storage.releaseWorry(id);
-    setState(() => _worries.removeWhere((w) => w.id == id));
-    if (_worries.isEmpty) widget.onAllCleared();
+  Future<void> _release(int index) async {
+    if (index < 0 || index >= _worries.length) return;
+    final worry = _worries[index];
+    await widget.storage.releaseWorry(worry.id);
+    _removeItemAnimated(index, worry);
   }
 
-  Future<void> _keep(String id) async {
-    await widget.storage.keepWorry(id);
-    setState(() => _worries.removeWhere((w) => w.id == id));
-    if (_worries.isEmpty) widget.onAllCleared();
+  Future<void> _keep(int index) async {
+    if (index < 0 || index >= _worries.length) return;
+    final worry = _worries[index];
+    await widget.storage.keepWorry(worry.id);
+    _removeItemAnimated(index, worry);
+  }
+
+  void _removeItemAnimated(int index, Worry worry) {
+    _worries.removeAt(index);
+    _listKey.currentState?.removeItem(
+      index,
+      (context, animation) => _buildAnimatedCard(worry, animation),
+      duration: AppDurations.base,
+    );
+
+    if (_worries.isEmpty) {
+      // Delay so the last card's exit animation completes before transitioning
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          setState(() {}); // trigger empty state rebuild
+          widget.onAllCleared();
+        }
+      });
+    } else {
+      setState(() {});
+    }
+  }
+
+  /// Builds a card wrapped in SizeTransition + FadeTransition for AnimatedList.
+  Widget _buildAnimatedCard(Worry worry, Animation<double> animation) {
+    return SizeTransition(
+      sizeFactor: CurvedAnimation(
+        parent: animation,
+        curve: AppCurves.easeOut,
+      ),
+      child: FadeTransition(
+        opacity: animation,
+        child: _buildCard(worry, -1), // index -1 = non-interactive during removal
+      ),
+    );
+  }
+
+  Widget _buildCard(Worry worry, int index) {
+    final locale = widget.locale;
+    final isInteractive = index >= 0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sp4),
+      padding: const EdgeInsets.all(AppSpacing.sp4),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceStrong,
+        borderRadius: BorderRadius.circular(AppShape.radius),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Worry text ──
+          Text(
+            worry.text,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              color: AppColors.text,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sp2),
+
+          // ── Relative time ──
+          Text(
+            worry.relativeTime,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sp3),
+
+          // ── Action buttons ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: isInteractive ? () => _keep(index) : null,
+                child: Text(
+                  AppStrings.get('keepButton', locale: locale),
+                  style: const TextStyle(color: AppColors.textMuted),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sp2),
+              ElevatedButton(
+                onPressed: isInteractive ? () => _release(index) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentSoft,
+                ),
+                child: Text(
+                  AppStrings.get('releaseButton', locale: locale),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -104,121 +206,18 @@ class _RevealScreenState extends State<RevealScreen> {
 
         const SizedBox(height: AppSpacing.sp6),
 
-        // ── Worry list ──
+        // ── Worry list (AnimatedList for proper removal animations) ──
         Expanded(
-          child: ListView.builder(
+          child: AnimatedList(
+            key: _listKey,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sp6),
-            itemCount: _worries.length,
-            itemBuilder: (context, index) {
-              final worry = _worries[index];
-              return _WorryCard(
-                worry: worry,
-                locale: locale,
-                onRelease: () => _release(worry.id),
-                onKeep: () => _keep(worry.id),
-              );
+            initialItemCount: _worries.length,
+            itemBuilder: (context, index, animation) {
+              return _buildAnimatedCard(_worries[index], animation);
             },
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Individual worry card in the reveal list.
-class _WorryCard extends StatefulWidget {
-  final Worry worry;
-  final String locale;
-  final VoidCallback onRelease;
-  final VoidCallback onKeep;
-
-  const _WorryCard({
-    required this.worry,
-    required this.locale,
-    required this.onRelease,
-    required this.onKeep,
-  });
-
-  @override
-  State<_WorryCard> createState() => _WorryCardState();
-}
-
-class _WorryCardState extends State<_WorryCard>
-    with SingleTickerProviderStateMixin {
-  double _opacity = 1.0;
-  double _translateY = 0.0;
-
-  void _animateRelease() {
-    setState(() {
-      _opacity = 0.0;
-      _translateY = -24.0;
-    });
-    Future.delayed(AppDurations.base, widget.onRelease);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: AppDurations.base,
-      curve: AppCurves.easeOut,
-      transform: Matrix4.translationValues(0, _translateY, 0),
-      child: AnimatedOpacity(
-        duration: AppDurations.base,
-        opacity: _opacity,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: AppSpacing.sp4),
-          padding: const EdgeInsets.all(AppSpacing.sp4),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceStrong,
-            borderRadius: BorderRadius.circular(AppShape.radius),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Worry text ──
-              Text(
-                widget.worry.text,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const SizedBox(height: AppSpacing.sp2),
-
-              // ── Relative time ──
-              Text(
-                widget.worry.relativeTime,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 12,
-                    ),
-              ),
-              const SizedBox(height: AppSpacing.sp3),
-
-              // ── Action buttons ──
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: widget.onKeep,
-                    child: Text(
-                      AppStrings.get('keepButton', locale: widget.locale),
-                      style: const TextStyle(color: AppColors.textMuted),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sp2),
-                  ElevatedButton(
-                    onPressed: _animateRelease,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentSoft,
-                    ),
-                    child: Text(
-                      AppStrings.get('releaseButton', locale: widget.locale),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

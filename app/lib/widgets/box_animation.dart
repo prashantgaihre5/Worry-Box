@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import 'dart:math' as math;
 
 /// The visual box/lid widget used across CAPTURE, LOCKED, and REVEAL screens.
-///
-/// This is a placeholder scaffold. The designer will provide the final
-/// visual design. Developers should wire animations here.
 ///
 /// States:
 ///   - [isOpen] = true  → lid is open (CAPTURE / REVEAL)
@@ -27,118 +25,287 @@ class BoxAnimation extends StatefulWidget {
 }
 
 class _BoxAnimationState extends State<BoxAnimation>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+    with TickerProviderStateMixin {
+  late AnimationController _sealController;
+  late AnimationController _glowController;
   late Animation<double> _lidAngle;
+  late Animation<double> _lockOpacity;
+  late Animation<double> _glowAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+
+    // Seal animation: lid closes + lock fades in
+    _sealController = AnimationController(
       vsync: this,
       duration: AppDurations.seal,
     );
-    _lidAngle = Tween<double>(
-      begin: 0.0,  // open
-      end: -0.5,   // closed (rotated)
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: AppCurves.seal,
-    ));
 
-    _controller.addStatusListener((status) {
+    _lidAngle = Tween<double>(begin: 0.0, end: -0.5).animate(
+      CurvedAnimation(parent: _sealController, curve: AppCurves.seal),
+    );
+
+    _lockOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _sealController,
+        curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
+      ),
+    );
+
+    _sealController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         widget.onSealComplete?.call();
       }
     });
+
+    // Pulsing glow: subtle accent glow behind the box
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _glowAnimation = Tween<double>(begin: 0.2, end: 0.6).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+
+    // If starting closed, snap to closed state
+    if (!widget.isOpen && !widget.isSealing) {
+      _sealController.value = 1.0;
+    }
   }
 
   @override
   void didUpdateWidget(BoxAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isSealing && !oldWidget.isSealing) {
-      _controller.forward(from: 0.0);
+      _sealController.forward(from: 0.0);
     }
     if (widget.isOpen && !oldWidget.isOpen) {
-      _controller.reverse();
+      _sealController.reverse();
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _sealController.dispose();
+    _glowController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 160,
-      height: 160,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return CustomPaint(
-            painter: _BoxPainter(
-              lidAngle: _lidAngle.value,
-              isLocked: !widget.isOpen,
-            ),
-          );
-        },
+    return Semantics(
+      label: widget.isOpen ? 'Worry box, open' : 'Worry box, locked',
+      child: SizedBox(
+        width: 180,
+        height: 180,
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_sealController, _glowController]),
+          builder: (context, child) {
+            return CustomPaint(
+              painter: _BoxPainter(
+                lidAngle: _lidAngle.value,
+                lockOpacity: _lockOpacity.value,
+                glowValue: _glowAnimation.value,
+                isLocked: !widget.isOpen,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 }
 
-/// Placeholder painter for the box.
-/// TODO: Designer will provide final visual. Replace this with their design.
+/// Premium custom painter for the worry box.
+/// Draws a stylized box with gradient body, animated lid, pulsing glow,
+/// and detailed padlock icon.
 class _BoxPainter extends CustomPainter {
   final double lidAngle;
+  final double lockOpacity;
+  final double glowValue;
   final bool isLocked;
 
-  _BoxPainter({required this.lidAngle, required this.isLocked});
+  _BoxPainter({
+    required this.lidAngle,
+    required this.lockOpacity,
+    required this.glowValue,
+    required this.isLocked,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final boxPaint = Paint()
-      ..color = AppColors.surfaceStrong
-      ..style = PaintingStyle.fill;
+    final double w = size.width;
+    final double h = size.height;
 
-    final borderPaint = Paint()
-      ..color = AppColors.accent.withValues(alpha: 0.4)
+    // ── 1. Glow effect behind the box ──
+    final glowPaint = Paint()
+      ..color = AppColors.accent.withValues(alpha: glowValue * 0.35)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 24);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(w / 2, h * 0.68),
+        width: w * 0.75,
+        height: h * 0.4,
+      ),
+      glowPaint,
+    );
+
+    // ── 2. Box body with gradient ──
+    final Rect bodyRect = Rect.fromLTRB(w * 0.1, h * 0.4, w * 0.9, h * 0.92);
+    final RRect bodyRRect =
+        RRect.fromRectAndRadius(bodyRect, const Radius.circular(14));
+
+    final bodyGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        AppColors.bg1.withValues(alpha: 0.95),
+        const Color(0xFF1A2548),
+        AppColors.bg1,
+      ],
+    );
+    canvas.drawRRect(
+        bodyRRect, Paint()..shader = bodyGradient.createShader(bodyRect));
+
+    // Body border
+    canvas.drawRRect(
+      bodyRRect,
+      Paint()
+        ..color = AppColors.accent.withValues(alpha: 0.25)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    // ── 3. Edge highlight lines ──
+    final highlightPaint = Paint()
+      ..color = AppColors.accentSoft.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      ..strokeWidth = 1;
 
-    // Box body
-    final boxRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(10, size.height * 0.4, size.width - 20, size.height * 0.55),
-      const Radius.circular(AppShape.radiusSm),
+    // Top edge of body
+    canvas.drawLine(
+      Offset(w * 0.15, h * 0.44),
+      Offset(w * 0.85, h * 0.44),
+      highlightPaint,
     );
-    canvas.drawRRect(boxRect, boxPaint);
-    canvas.drawRRect(boxRect, borderPaint);
 
-    // Lid
+    // Bottom trim
+    canvas.drawLine(
+      Offset(w * 0.2, h * 0.86),
+      Offset(w * 0.8, h * 0.86),
+      highlightPaint..color = AppColors.accentSoft.withValues(alpha: 0.15),
+    );
+
+    // ── 4. Lid with perspective rotation ──
     canvas.save();
-    canvas.translate(10, size.height * 0.4);
-    canvas.rotate(lidAngle);
-    final lidRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, -20, size.width - 20, 24),
-      const Radius.circular(6),
+    canvas.translate(w * 0.1, h * 0.4);
+    canvas.rotate(lidAngle * math.pi);
+
+    final Rect lidRect = Rect.fromLTWH(0, -22, w * 0.8, 26);
+    final RRect lidRRect =
+        RRect.fromRectAndRadius(lidRect, const Radius.circular(8));
+
+    // Lid gradient (slightly lighter than body)
+    final lidGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        const Color(0xFF1E2D55),
+        AppColors.bg1.withValues(alpha: 0.95),
+      ],
     );
-    canvas.drawRRect(lidRect, boxPaint);
-    canvas.drawRRect(lidRect, borderPaint);
+    canvas.drawRRect(
+        lidRRect, Paint()..shader = lidGradient.createShader(lidRect));
+
+    // Lid border
+    canvas.drawRRect(
+      lidRRect,
+      Paint()
+        ..color = AppColors.accent.withValues(alpha: 0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    // Lid accent highlight
+    canvas.drawLine(
+      Offset(w * 0.05, -18),
+      Offset(w * 0.75, -18),
+      Paint()
+        ..color = AppColors.accentSoft.withValues(alpha: 0.2)
+        ..strokeWidth = 1,
+    );
+
     canvas.restore();
 
-    // Lock icon when closed
-    if (isLocked) {
-      final lockPaint = Paint()..color = AppColors.accent;
-      final center = Offset(size.width / 2, size.height * 0.38);
-      canvas.drawCircle(center, 8, lockPaint);
+    // ── 5. Padlock icon (fades in with lockOpacity) ──
+    if (lockOpacity > 0.01) {
+      final double lockCenterX = w / 2;
+      final double lockCenterY = h * 0.62;
+      final double lockW = w * 0.14;
+      final double lockH = h * 0.12;
+
+      final lockPaint = Paint()
+        ..color = AppColors.accent.withValues(alpha: lockOpacity)
+        ..style = PaintingStyle.fill;
+
+      // Lock body — rounded rectangle
+      final lockBodyRect = Rect.fromCenter(
+        center: Offset(lockCenterX, lockCenterY),
+        width: lockW,
+        height: lockH,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(lockBodyRect, const Radius.circular(3)),
+        lockPaint,
+      );
+
+      // Shackle — arc above the lock body
+      final shacklePaint = Paint()
+        ..color = AppColors.accent.withValues(alpha: lockOpacity)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = lockW * 0.22
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: Offset(lockCenterX, lockCenterY - lockH * 0.5),
+          width: lockW * 0.55,
+          height: lockH * 0.7,
+        ),
+        math.pi,
+        math.pi,
+        false,
+        shacklePaint,
+      );
+
+      // Keyhole — small circle + small rect
+      final keyholePaint = Paint()
+        ..color = AppColors.bg1.withValues(alpha: lockOpacity)
+        ..style = PaintingStyle.fill;
+
+      canvas.drawCircle(
+        Offset(lockCenterX, lockCenterY - lockH * 0.08),
+        lockW * 0.1,
+        keyholePaint,
+      );
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(lockCenterX, lockCenterY + lockH * 0.12),
+          width: lockW * 0.08,
+          height: lockH * 0.22,
+        ),
+        keyholePaint,
+      );
     }
   }
 
   @override
   bool shouldRepaint(covariant _BoxPainter oldDelegate) {
-    return oldDelegate.lidAngle != lidAngle || oldDelegate.isLocked != isLocked;
+    return oldDelegate.lidAngle != lidAngle ||
+        oldDelegate.lockOpacity != lockOpacity ||
+        oldDelegate.glowValue != glowValue ||
+        oldDelegate.isLocked != isLocked;
   }
 }
