@@ -7,7 +7,6 @@ import '../l10n/app_strings.dart';
 import '../theme.dart';
 import '../widgets/box_animation.dart';
 import '../widgets/glass_card.dart';
-import '../models/track.dart';
 
 class LockedScreen extends StatefulWidget {
   final StorageService storage;
@@ -67,20 +66,7 @@ class _LockedScreenState extends State<LockedScreen> {
     final closestWorry = lockedWorries.first;
     final remainingMs = closestWorry.unlockAt - DateTime.now().millisecondsSinceEpoch;
     final remainingSeconds = remainingMs > 0 ? remainingMs ~/ 1000 : 0;
-    
-    // Automatically transition if timer hits 0
-    if (remainingSeconds <= 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        // Mark all ready worries as revealed and change state
-        for (var w in lockedWorries) {
-          if (w.unlockAt <= DateTime.now().millisecondsSinceEpoch) {
-            widget.storage.markRevealed(w.id);
-          }
-        }
-        widget.onStateChange();
-      });
-    }
-
+    final isReady = remainingSeconds <= 0;
     final worriesCountText = AppStrings.get('worriesCount', locale: _locale).replaceAll('{count}', '${lockedWorries.length}');
 
     return SingleChildScrollView(
@@ -100,10 +86,7 @@ class _LockedScreenState extends State<LockedScreen> {
 
           // Headline
           Text(
-            activeWorries.isNotEmpty 
-                ? AppStrings.getHeadline(activeWorries.first.id.hashCode.abs(), locale: _locale)
-                : AppStrings.get('lockedHeadline', locale: _locale),
-            textAlign: TextAlign.center,
+            AppStrings.get('lockedHeadline', locale: _locale),
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -154,11 +137,11 @@ class _LockedScreenState extends State<LockedScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _formatTime(remainingSeconds),
-                  style: const TextStyle(
+                  isReady ? 'Ready to open!' : _formatTime(remainingSeconds),
+                  style: TextStyle(
                     fontSize: 40,
                     fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                    color: isReady ? const Color(0xFF6EE7B7) : Colors.white,
                     fontFamily: 'monospace',
                   ),
                 ),
@@ -211,7 +194,41 @@ class _LockedScreenState extends State<LockedScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const SizedBox(height: 24),          // Add Button (routes to Capture)
+
+          // "Open Now" button — only visible when timer has reached 0
+          if (isReady) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  backgroundColor: const Color(0x3310B981),
+                  foregroundColor: const Color(0xFF6EE7B7),
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: Color(0x5510B981)),
+                  ),
+                ),
+                onPressed: () {
+                  for (final w in lockedWorries) {
+                    if (w.unlockAt <= DateTime.now().millisecondsSinceEpoch) {
+                      widget.storage.markRevealed(w.id);
+                    }
+                  }
+                  widget.onStateChange();
+                },
+                icon: const Icon(Icons.lock_open_rounded, size: 18),
+                label: const Text(
+                  'Open Now',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Add Button (routes to Capture)
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
