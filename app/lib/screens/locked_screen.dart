@@ -86,18 +86,18 @@ class _LockedScreenState extends State<LockedScreen> {
     }
   }
 
-  void _toggleImportant(Worry worry) {
+  Future<void> _toggleImportant(Worry worry) async {
     if (worry.isImportant) {
-      widget.storage.unmarkImportant(worry.id);
+      await widget.storage.unmarkImportant(worry.id);
     } else {
-      widget.storage.markImportant(worry.id);
+      await widget.storage.markImportant(worry.id);
     }
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
-  void _removeWorry(String id) {
-    widget.storage.removeWorry(id);
-    setState(() {});
+  Future<void> _removeWorry(String id) async {
+    await widget.storage.releaseWorry(id);
+    if (mounted) setState(() {});
     
     // Check if we need to return to capture screen
     if (widget.storage.getWorries().where((w) => w.status != 'released').isEmpty) {
