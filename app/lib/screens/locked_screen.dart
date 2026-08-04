@@ -378,13 +378,46 @@ class _WorryCardState extends State<_WorryCard> {
 
     if (!isUnlocked) {
       // ── Locked Bin State ──
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sp3),
-        child: GlassCard(
-          padding: const EdgeInsets.all(AppSpacing.sp3),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+      return Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sp3),
+        padding: const EdgeInsets.all(AppSpacing.sp3),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceStrong,
+          borderRadius: BorderRadius.circular(AppShape.radius),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.bg1,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Icon(Icons.delete_outline_rounded, color: AppColors.textMuted, size: 26),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: AppColors.bg1,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.border, width: 1),
+                      ),
+                      child: const Icon(Icons.lock, color: AppColors.accent, size: 10),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isTimerEnded)
               Row(
                 children: [
                   Container(
