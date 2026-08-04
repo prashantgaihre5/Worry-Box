@@ -133,6 +133,14 @@ class _LockedScreenState extends State<LockedScreen> {
                   remainingTime: _formatRemainingTime(worry),
                   onToggleImportant: () => _toggleImportant(worry),
                   onRemove: () => _removeWorry(worry.id),
+                  onOpenBox: () {
+                    widget.storage.markRevealed(worry.id);
+                    setState(() {});
+                  },
+                  onAddMoreTime: (seconds) {
+                    widget.storage.addTimeToWorry(worry.id, seconds);
+                    setState(() {});
+                  },
                 );
               },
             ),
@@ -271,6 +279,8 @@ class _WorryCard extends StatefulWidget {
   final String remainingTime;
   final VoidCallback onToggleImportant;
   final VoidCallback onRemove;
+  final VoidCallback onOpenBox;
+  final Function(int) onAddMoreTime;
 
   const _WorryCard({
     super.key,
@@ -278,6 +288,8 @@ class _WorryCard extends StatefulWidget {
     required this.remainingTime,
     required this.onToggleImportant,
     required this.onRemove,
+    required this.onOpenBox,
+    required this.onAddMoreTime,
   });
 
   @override
@@ -287,9 +299,42 @@ class _WorryCard extends StatefulWidget {
 class _WorryCardState extends State<_WorryCard> {
   bool _isExpanded = false;
 
+  void _showAddTimeDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.bg0,
+          title: const Text('Add more time', style: TextStyle(color: AppColors.text, fontSize: 16)),
+          content: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _DurationOption('15m', 900),
+              _DurationOption('1h', 3600),
+              _DurationOption('3h', 10800),
+              _DurationOption('12h', 43200),
+            ].map((opt) => ActionChip(
+              backgroundColor: AppColors.surface,
+              side: const BorderSide(color: AppColors.border),
+              label: Text(opt.label, style: const TextStyle(color: AppColors.text)),
+              onPressed: () {
+                Navigator.pop(context);
+                widget.onAddMoreTime(opt.seconds);
+              },
+            )).toList(),
+          ),
+        );
+      }
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isUnlocked = widget.remainingTime == 'Unlocked';
+    // A worry is 'Ready to Open' when timer ends but it hasn't been opened yet.
+    final isTimerEnded = widget.remainingTime == 'Unlocked';
+    final isReadyToOpen = isTimerEnded && widget.worry.status == 'locked';
+    final isUnlocked = widget.worry.status == 'revealed' || widget.worry.status == 'kept';
     final isImportant = widget.worry.isImportant;
 
     if (!isUnlocked && _isExpanded) {
@@ -381,7 +426,7 @@ class _WorryCardState extends State<_WorryCard> {
                   ),
                 ),
               ),
-              if (!isUnlocked)
+              if (!isTimerEnded)
                 Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.sp1),
                   child: Row(
@@ -404,7 +449,7 @@ class _WorryCardState extends State<_WorryCard> {
                     ],
                   ),
                 )
-              else
+              else if (isUnlocked)
                 IconButton(
                   onPressed: () => setState(() => _isExpanded = !_isExpanded),
                   icon: Icon(
@@ -415,6 +460,60 @@ class _WorryCardState extends State<_WorryCard> {
                 ),
             ],
           ),
+
+          // ── Choice Prompt when Timer Ends ──
+          if (isReadyToOpen)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sp3),
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.sp3),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppShape.radiusSm),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Timer ended. What would you like to do?',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.text,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.sp3),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: widget.onOpenBox,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            child: const Text('Open Box', style: TextStyle(fontSize: 13)),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sp2),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => _showAddTimeDialog(context),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.text,
+                              side: const BorderSide(color: AppColors.border),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            child: const Text('Keep Locked', style: TextStyle(fontSize: 13)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
           AnimatedSize(
             duration: AppDurations.base,

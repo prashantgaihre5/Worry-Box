@@ -217,10 +217,22 @@ class StorageService extends ChangeNotifier {
   /// Finds worry by id, sets isImportant = false, saves state, notifies listeners.
   Future<void> unmarkImportant(String id) async {
     final idx = _state.worries.indexWhere((w) => w.id == id);
-    if (idx == -1) return;
-    _state.worries[idx].isImportant = false;
-    await _saveState();
-    notifyListeners();
+    if (idx != -1) {
+      _state.worries[idx].isImportant = false;
+      await _saveState();
+      notifyListeners();
+    }
+  }
+
+  /// Adds more time to a locked worry
+  Future<void> addTimeToWorry(String id, int durationSeconds) async {
+    final idx = _state.worries.indexWhere((w) => w.id == id);
+    if (idx != -1) {
+      _state.worries[idx].unlockAt = DateTime.now().millisecondsSinceEpoch + (durationSeconds * 1000);
+      _state.worries[idx].status = 'locked';
+      await _saveState();
+      notifyListeners();
+    }
   }
 
   /// Updates the unlock time for FUTURE worries only.
