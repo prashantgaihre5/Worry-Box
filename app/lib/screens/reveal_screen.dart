@@ -47,7 +47,9 @@ class _RevealScreenState extends State<RevealScreen> {
   
   void _refreshWorries() {
     setState(() {
-      _worries = widget.storage.getWorries().where((w) => w.status != 'locked').toList();
+      _worries = widget.storage.getWorries()
+          .where((w) => w.status == 'revealed' || w.status == 'kept')
+          .toList();
       // Sort newest first
       _worries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     });

@@ -7,6 +7,7 @@ import '../l10n/app_strings.dart';
 import '../theme.dart';
 import '../widgets/box_animation.dart';
 import '../widgets/glass_card.dart';
+import '../models/track.dart';
 
 class LockedScreen extends StatefulWidget {
   final StorageService storage;
@@ -99,7 +100,10 @@ class _LockedScreenState extends State<LockedScreen> {
 
           // Headline
           Text(
-            AppStrings.get('lockedHeadline', locale: _locale),
+            activeWorries.isNotEmpty 
+                ? AppStrings.getHeadline(activeWorries.first.id.hashCode.abs(), locale: _locale)
+                : AppStrings.get('lockedHeadline', locale: _locale),
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -207,8 +211,7 @@ class _LockedScreenState extends State<LockedScreen> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Add Button (routes to Capture)
+          const SizedBox(height: 24),          // Add Button (routes to Capture)
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(

@@ -204,11 +204,14 @@ class StorageService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Deletes the worry from the list entirely and increments released counter.
+  /// Releases the worry (status → "released") and increments released counter.
   Future<void> releaseWorry(String id) async {
-    final initialCount = _state.worries.length;
-    _state.worries.removeWhere((w) => w.id == id);
-    if (_state.worries.length < initialCount) {
+    final idx = _state.worries.indexWhere((w) => w.id == id);
+    if (idx == -1) return;
+    
+    // Only increment the counter if it wasn't already released
+    if (_state.worries[idx].status != 'released') {
+      _state.worries[idx].status = 'released';
       _state = AppState(
         schemaVersion: _state.schemaVersion,
         settings: _state.settings,

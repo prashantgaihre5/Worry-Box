@@ -5,13 +5,22 @@
 /// Copy reference follows SPEC.md §14.
 class AppStrings {
   // ── English ───────────────────────────────
-  static const Map<String, String> en = {
-    'appTitle': 'Worry Box',
+  static const Map<String, dynamic> en = {
+    'appTitle': 'Abhaya',
     'subtitle': 'Write it down. Put it away. Come back to it later.',
     'placeholder': "What's on your mind?",
     'submitButton': 'Put it away',
     'captureHelper': 'Opens at {time}',
-    'lockedHeadline': 'Your thoughts are safe.',
+    'lockedHeadline': 'Your thoughts are safe.', // fallback
+    'lockedHeadlines': [
+      'Your thoughts are safe.',
+      'Stored away so you can focus on now.',
+      'Let it rest until the time is right.',
+      'Your worries are secure for now.',
+      'Out of sight, out of mind.',
+      'A safe place for heavy thoughts.',
+      'Take a deep breath. We have got this.',
+    ],
     'lockedCountdown': 'Opens in {time}',
     'lockedCount': '{count} worries put away',
     'lockedCountSingular': '1 worry put away',
@@ -31,16 +40,30 @@ class AppStrings {
     'devModeBadge': 'dev mode',
     'putAwayAgo': 'put away {time} ago',
     'justNow': 'put away just now',
+    'analytics': 'Analytics',
+    'analyticsSub': 'Your journey in numbers.',
+    'totalCaptured': 'Total Captured',
+    'totalLetGo': 'Total Let Go',
+    'totalKept': 'Currently Kept',
   };
 
   // ── Nepali ────────────────────────────────
-  static const Map<String, String> ne = {
-    'appTitle': 'चिन्ता बाकस',
+  static const Map<String, dynamic> ne = {
+    'appTitle': 'अभय',
     'subtitle': 'लेख्नुहोस्। राख्नुहोस्। पछि फर्कनुहोस्।',
     'placeholder': 'तपाईंको मनमा के छ?',
     'submitButton': 'राखिदिनुहोस्',
     'captureHelper': '{time} मा खुल्छ',
-    'lockedHeadline': 'तपाईंका विचारहरू सुरक्षित छन्।',
+    'lockedHeadline': 'तपाईंका विचारहरू सुरक्षित छन्।', // fallback
+    'lockedHeadlines': [
+      'तपाईंका विचारहरू सुरक्षित छन्।',
+      'अहिलेको समयमा ध्यान केन्द्रित गर्न यसलाई टाढा राखिएको छ।',
+      'सही समय नआएसम्म यसलाई आराम दिनुहोस्।',
+      'तपाईंका चिन्ताहरू अहिलेको लागि सुरक्षित छन्।',
+      'आँखाबाट टाढा, मनबाट टाढा।',
+      'भारी विचारहरूको लागि एक सुरक्षित ठाउँ।',
+      'लामो सास फेर्नुहोस्। हामी यो सम्हाल्न सक्छौं।',
+    ],
     'lockedCountdown': '{time} मा खुल्छ',
     'lockedCount': '{count} चिन्ताहरू राखिएका छन्',
     'lockedCountSingular': '१ चिन्ता राखिएको छ',
@@ -58,15 +81,27 @@ class AppStrings {
     'stopAudio': 'संगीत बन्द गर्नुहोस्',
     'languageToggle': 'English',
     'devModeBadge': 'dev mode',
-    'putAwayAgo': '{time} अगाडि राखिएको',
+    'putAwayAgo': '{time} अघि राखिएको',
     'justNow': 'भर्खरै राखिएको',
+    'analytics': 'विश्लेषण',
+    'analyticsSub': 'अङ्कहरूमा तपाईंको यात्रा।',
+    'totalCaptured': 'कुल लेखिएको',
+    'totalLetGo': 'कुल हटाइएको',
+    'totalKept': 'हाल राखिएको',
   };
 
   /// Retrieves a localized string by key.
   /// Falls back to English if the key is not found.
   static String get(String key, {String locale = 'en'}) {
     final map = locale == 'ne' ? ne : en;
-    return map[key] ?? en[key] ?? key;
+    return (map[key] as String?) ?? en[key] as String? ?? key;
+  }
+
+  static String getHeadline(int index, {String locale = 'en'}) {
+    final map = locale == 'ne' ? ne : en;
+    final fallbackMap = en;
+    final list = (map['lockedHeadlines'] as List<String>?) ?? (fallbackMap['lockedHeadlines'] as List<String>);
+    return list[index % list.length];
   }
 
   /// Retrieves a localized string with placeholder replacement.

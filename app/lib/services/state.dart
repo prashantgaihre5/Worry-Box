@@ -19,13 +19,21 @@ enum ViewState { capture, locked, reveal }
 ///
 /// State is always derived from the clock — never stored as a boolean.
 ViewState deriveViewState(StorageService storage) {
-  final activeWorries = storage.getWorries().where((w) => w.status != 'released').toList();
-  if (activeWorries.isEmpty) return ViewState.capture;
-
-  final hasRevealed = activeWorries.any((w) => w.status == 'revealed');
+  final worries = storage.getWorries();
+  final now = DateTime.now().millisecondsSinceEpoch;
+  
+  // 1. If any worry is revealed OR is locked but its time has passed, show Reveal.
+  final hasRevealed = worries.any((w) => 
+      w.status == 'revealed' || (w.status == 'locked' && w.unlockAt <= now)
+  );
   if (hasRevealed) return ViewState.reveal;
 
-  return ViewState.locked;
+  // 2. If any worry is locked and waiting in the future, show Locked.
+  final hasLocked = worries.any((w) => w.status == 'locked' && w.unlockAt > now);
+  if (hasLocked) return ViewState.locked;
+
+  // 3. Otherwise (only kept, released, or empty), show Capture.
+  return ViewState.capture;
 }
 
 /// Formats a remaining-time duration into a human-readable countdown.

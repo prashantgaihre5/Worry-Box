@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'theme.dart';
 import 'services/storage.dart';
 import 'services/audio_service.dart';
@@ -7,6 +8,9 @@ import 'screens/capture_screen.dart';
 import 'screens/locked_screen.dart';
 import 'screens/reveal_screen.dart';
 import 'screens/bookmarks_screen.dart';
+import 'screens/meditation_screen.dart';
+import 'screens/archive_screen.dart';
+import 'screens/analytics_screen.dart';
 import 'widgets/animated_background.dart';
 import 'l10n/app_strings.dart';
 import 'models/worry.dart';
@@ -144,9 +148,17 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
     return MaterialApp(
       navigatorKey: _navigatorKey,
       scaffoldMessengerKey: scaffoldMessengerKey,
-      title: 'Worry Box',
+      title: 'Abhaya',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: {
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.touch,
+          PointerDeviceKind.stylus,
+          PointerDeviceKind.trackpad,
+        },
+      ),
       home: Scaffold(
         body: Stack(
           children: [
@@ -180,9 +192,9 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
                                   child: const Icon(Icons.layers, color: AppColors.accentSoft, size: 16),
                                 ),
                                 const SizedBox(width: 10),
-                                const Text(
-                                  'Worry Box',
-                                  style: TextStyle(
+                                Text(
+                                  AppStrings.get('appTitle', locale: _locale),
+                                  style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
@@ -194,29 +206,6 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
                             // Actions
                             Row(
                               children: [
-                                // Audio
-                                GestureDetector(
-                                  onTap: () async {
-                                    await _audio.toggle();
-                                    setState(() {});
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: _audio.isPlaying ? AppColors.accent.withValues(alpha: 0.25) : AppColors.glassPanelBg,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: _audio.isPlaying ? AppColors.accent.withValues(alpha: 0.5) : AppColors.glassPanelBorder,
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      _audio.isPlaying ? Icons.volume_up : Icons.volume_off,
-                                      size: 16,
-                                      color: _audio.isPlaying ? AppColors.accentSoft : AppColors.textMuted,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
                                 // Language
                                 GestureDetector(
                                   onTap: _toggleLocale,
@@ -292,6 +281,26 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
                                           Icon(Icons.bookmark_border, size: 16, color: AppColors.accentSoft),
                                           SizedBox(width: 8),
                                           Text('Bookmarks', style: TextStyle(color: Colors.white, fontSize: 13)),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'archive',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.history, size: 16, color: AppColors.accentSoft),
+                                          SizedBox(width: 8),
+                                          Text('Archive', style: TextStyle(color: Colors.white, fontSize: 13)),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'analytics',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.bar_chart, size: 16, color: AppColors.accentSoft),
+                                          SizedBox(width: 8),
+                                          Text('Analytics', style: TextStyle(color: Colors.white, fontSize: 13)),
                                         ],
                                       ),
                                     ),
@@ -506,23 +515,19 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
 
   Widget _buildSectionContent() {
     if (_activeSection == 'meditation') {
-      return Center(
+      return KeyedSubtree(
         key: const ValueKey('meditation'),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.self_improvement, size: 48, color: AppColors.accentSoft),
-            const SizedBox(height: 16),
-            const Text(
-              'Meditation Area',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Coming soon...',
-              style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.5)),
-            ),
-          ],
+        child: MeditationScreen(
+          audio: _audio,
+        ),
+      );
+    }
+
+    if (_activeSection == 'archive') {
+      return KeyedSubtree(
+        key: const ValueKey('archive'),
+        child: ArchiveScreen(
+          storage: widget.storage,
         ),
       );
     }
@@ -531,6 +536,16 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
       return KeyedSubtree(
         key: const ValueKey('bookmarks'),
         child: BookmarksScreen(
+          storage: widget.storage,
+          locale: _locale,
+        ),
+      );
+    }
+
+    if (_activeSection == 'analytics') {
+      return KeyedSubtree(
+        key: const ValueKey('analytics'),
+        child: AnalyticsScreen(
           storage: widget.storage,
           locale: _locale,
         ),
