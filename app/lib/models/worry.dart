@@ -9,6 +9,7 @@ class Worry {
   final int createdAt;
   final int unlockAt;
   String status; // "locked" | "revealed" | "released" | "kept"
+  bool isImportant;
 
   Worry({
     required this.id,
@@ -16,6 +17,7 @@ class Worry {
     required this.createdAt,
     required this.unlockAt,
     this.status = 'locked',
+    this.isImportant = false,
   });
 
   /// Creates a new Worry from user input.
@@ -91,6 +93,30 @@ class Worry {
     );
   }
 
+  /// Creates a Worry that unlocks after [durationSeconds] from now.
+  factory Worry.createWithDuration(String text, int durationSeconds) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      throw ArgumentError('Worry text cannot be empty.');
+    }
+    if (trimmed.length > 280) {
+      throw ArgumentError('Worry text cannot exceed 280 characters.');
+    }
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final random = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+    final id = '$nowMs-${random.substring(random.length > 5 ? random.length - 5 : 0)}';
+
+    return Worry(
+      id: id,
+      text: trimmed,
+      createdAt: nowMs,
+      unlockAt: nowMs + (durationSeconds * 1000),
+      status: 'locked',
+      isImportant: false,
+    );
+  }
+
   /// Whether this worry's unlock time has passed.
   bool get isUnlockable =>
       DateTime.now().millisecondsSinceEpoch >= unlockAt && status == 'locked';
@@ -122,6 +148,7 @@ class Worry {
       createdAt: json['createdAt'] as int,
       unlockAt: json['unlockAt'] as int,
       status: json['status'] as String? ?? 'locked',
+      isImportant: json['isImportant'] as bool? ?? false,
     );
   }
 
@@ -133,6 +160,7 @@ class Worry {
       'createdAt': createdAt,
       'unlockAt': unlockAt,
       'status': status,
+      'isImportant': isImportant,
     };
   }
 

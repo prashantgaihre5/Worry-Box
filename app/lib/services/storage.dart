@@ -123,6 +123,15 @@ class StorageService extends ChangeNotifier {
     return worry;
   }
 
+  /// Creates a Worry using Worry.createWithDuration, inserts at position 0, saves, notifies, returns the worry.
+  Future<Worry> addWorryWithDuration(String text, int durationSeconds) async {
+    final worry = Worry.createWithDuration(text, durationSeconds);
+    _state.worries.insert(0, worry);
+    await _saveState();
+    notifyListeners();
+    return worry;
+  }
+
   /// All worries, newest first.
   List<Worry> getWorries() => List.unmodifiable(_state.worries);
 
@@ -156,6 +165,13 @@ class StorageService extends ChangeNotifier {
     return pending.map((w) => w.unlockAt).reduce((a, b) => a < b ? a : b);
   }
 
+  /// Deletes the worry from the list entirely. (semantically named)
+  Future<void> removeWorry(String id) async {
+    _state.worries.removeWhere((w) => w.id == id);
+    await _saveState();
+    notifyListeners();
+  }
+
   /// Deletes the worry from the list entirely.
   Future<void> releaseWorry(String id) async {
     _state.worries.removeWhere((w) => w.id == id);
@@ -177,6 +193,24 @@ class StorageService extends ChangeNotifier {
     final idx = _state.worries.indexWhere((w) => w.id == id);
     if (idx == -1) return;
     _state.worries[idx].status = 'revealed';
+    await _saveState();
+    notifyListeners();
+  }
+
+  /// Finds worry by id, sets isImportant = true, saves state, notifies listeners.
+  Future<void> markImportant(String id) async {
+    final idx = _state.worries.indexWhere((w) => w.id == id);
+    if (idx == -1) return;
+    _state.worries[idx].isImportant = true;
+    await _saveState();
+    notifyListeners();
+  }
+
+  /// Finds worry by id, sets isImportant = false, saves state, notifies listeners.
+  Future<void> unmarkImportant(String id) async {
+    final idx = _state.worries.indexWhere((w) => w.id == id);
+    if (idx == -1) return;
+    _state.worries[idx].isImportant = false;
     await _saveState();
     notifyListeners();
   }

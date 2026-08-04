@@ -196,7 +196,6 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
           storage: widget.storage,
           audio: _audio,
           locale: _locale,
-          onWorryAdded: _onWorryAdded,
           onToggleLocale: _toggleLocale,
           onToggleDevMode: _toggleDevMode,
         );
