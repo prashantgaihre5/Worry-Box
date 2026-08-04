@@ -124,8 +124,16 @@ class StorageService extends ChangeNotifier {
   }
 
   /// Creates a Worry using Worry.createWithDuration, inserts at position 0, saves, notifies, returns the worry.
-  Future<Worry> addWorryWithDuration(String text, int durationSeconds) async {
-    final worry = Worry.createWithDuration(text, durationSeconds);
+  Future<Worry> addWorryWithDuration({
+    required String title,
+    required String description,
+    required int durationSeconds,
+  }) async {
+    final worry = Worry.createWithDuration(
+      title: title,
+      description: description,
+      durationSeconds: durationSeconds,
+    );
     _state.worries.insert(0, worry);
     await _saveState();
     notifyListeners();

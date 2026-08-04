@@ -5,7 +5,8 @@
 /// to avoid timezone ambiguity.
 class Worry {
   final String id;
-  final String text;
+  final String title;
+  final String text; // description
   final int createdAt;
   final int unlockAt;
   String status; // "locked" | "revealed" | "released" | "kept"
@@ -13,6 +14,7 @@ class Worry {
 
   Worry({
     required this.id,
+    this.title = '',
     required this.text,
     required this.createdAt,
     required this.unlockAt,
@@ -94,13 +96,22 @@ class Worry {
   }
 
   /// Creates a Worry that unlocks after [durationSeconds] from now.
-  factory Worry.createWithDuration(String text, int durationSeconds) {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) {
-      throw ArgumentError('Worry text cannot be empty.');
+  /// Accepts a [title] and [description] (stored in text field).
+  factory Worry.createWithDuration({
+    required String title,
+    required String description,
+    required int durationSeconds,
+  }) {
+    final trimmedTitle = title.trim();
+    final trimmedDesc = description.trim();
+    if (trimmedTitle.isEmpty) {
+      throw ArgumentError('Worry title cannot be empty.');
     }
-    if (trimmed.length > 280) {
-      throw ArgumentError('Worry text cannot exceed 280 characters.');
+    if (trimmedTitle.length > 100) {
+      throw ArgumentError('Worry title cannot exceed 100 characters.');
+    }
+    if (trimmedDesc.length > 500) {
+      throw ArgumentError('Description cannot exceed 500 characters.');
     }
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -109,7 +120,8 @@ class Worry {
 
     return Worry(
       id: id,
-      text: trimmed,
+      title: trimmedTitle,
+      text: trimmedDesc,
       createdAt: nowMs,
       unlockAt: nowMs + (durationSeconds * 1000),
       status: 'locked',
@@ -144,6 +156,7 @@ class Worry {
   factory Worry.fromJson(Map<String, dynamic> json) {
     return Worry(
       id: json['id'] as String,
+      title: json['title'] as String? ?? '',
       text: json['text'] as String,
       createdAt: json['createdAt'] as int,
       unlockAt: json['unlockAt'] as int,
@@ -156,6 +169,7 @@ class Worry {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'title': title,
       'text': text,
       'createdAt': createdAt,
       'unlockAt': unlockAt,
