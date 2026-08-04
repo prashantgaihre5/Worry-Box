@@ -19,8 +19,8 @@ enum ViewState { capture, locked, reveal }
 ///
 /// State is always derived from the clock — never stored as a boolean.
 ViewState deriveViewState(StorageService storage) {
-  if (storage.getUnlockedWorries().isNotEmpty) return ViewState.reveal;
-  if (storage.getPendingWorries().isNotEmpty) return ViewState.locked;
+  final activeWorries = storage.getWorries().where((w) => w.status != 'released');
+  if (activeWorries.isNotEmpty) return ViewState.locked;
   return ViewState.capture;
 }
 
