@@ -13,7 +13,6 @@ class LockedScreen extends StatefulWidget {
   final AudioService audio;
   final String locale;
   final VoidCallback onStateChange;
-  final String lastWorryText; // Legacy var from previous routing, keep for API compat
 
   const LockedScreen({
     super.key,
@@ -21,7 +20,6 @@ class LockedScreen extends StatefulWidget {
     required this.audio,
     required this.locale,
     required this.onStateChange,
-    required this.lastWorryText,
   });
 
   @override

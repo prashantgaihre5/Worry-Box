@@ -206,7 +206,6 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
           audio: _audio,
           locale: _locale,
           onStateChange: _refreshView,
-          lastWorryText: _lastAddedWorryText,
         );
       case ViewState.reveal:
         return RevealScreen(
