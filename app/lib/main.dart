@@ -139,7 +139,7 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: AppColors.text,
+                color: AppColors.accent,
               ),
             ),
           ),
