@@ -7,6 +7,7 @@ import '../services/audio_service.dart';
 import '../theme.dart';
 import '../widgets/box_animation.dart';
 import '../widgets/particle_burst.dart';
+import '../widgets/glass_card.dart';
 import 'dart:ui'; // for FontFeature
 
 class LockedScreen extends StatefulWidget {
@@ -127,13 +128,8 @@ class _LockedScreenState extends State<LockedScreen> {
           if (widget.storage.state.totalWorriesCreated > 0)
             Padding(
               padding: const EdgeInsets.fromLTRB(AppSpacing.sp4, AppSpacing.sp4, AppSpacing.sp4, 0),
-              child: Container(
+              child: GlassCard(
                 padding: const EdgeInsets.all(AppSpacing.sp3),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceStrong,
-                  borderRadius: BorderRadius.circular(AppShape.radius),
-                  border: Border.all(color: AppColors.borderHighlight),
-                ),
                 child: Row(
                   children: [
                     const Icon(Icons.insights_rounded, color: AppColors.accentSoft, size: 20),
@@ -180,18 +176,9 @@ class _LockedScreenState extends State<LockedScreen> {
           ),
 
           // ── Compact Input Form (Anchored to Bottom) ──
-          Container(
+          GlassCard(
+            borderRadius: 0,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sp4, vertical: AppSpacing.sp3),
-            decoration: BoxDecoration(
-              color: AppColors.bg0,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
             child: SafeArea(
               top: false,
               child: Column(
@@ -214,30 +201,44 @@ class _LockedScreenState extends State<LockedScreen> {
                   const SizedBox(height: AppSpacing.sp2),
                   
                   // Compact Text Fields
-                  TextField(
-                    controller: _titleController,
-                    maxLength: 100,
-                    onChanged: (_) => setState(() {}),
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                    decoration: const InputDecoration(
-                      hintText: 'Title...',
-                      counterText: '',
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sp2),
-                  TextField(
-                    controller: _descController,
-                    maxLines: 2,
-                    maxLength: 500,
-                    onChanged: (_) => setState(() {}),
-                    style: const TextStyle(fontSize: 13),
-                    decoration: const InputDecoration(
-                      hintText: 'Description...',
-                      counterText: '',
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  GlassInputCard(
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _titleController,
+                          maxLength: 100,
+                          onChanged: (_) => setState(() {}),
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+                          decoration: const InputDecoration(
+                            hintText: 'Title...',
+                            counterText: '',
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                          ),
+                        ),
+                        Divider(height: 1, color: AppColors.border),
+                        TextField(
+                          controller: _descController,
+                          maxLines: 2,
+                          maxLength: 500,
+                          onChanged: (_) => setState(() {}),
+                          style: const TextStyle(fontSize: 13, color: Colors.white),
+                          decoration: const InputDecoration(
+                            hintText: 'Description...',
+                            counterText: '',
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sp3),
@@ -367,7 +368,6 @@ class _WorryCardState extends State<_WorryCard> {
 
   @override
   Widget build(BuildContext context) {
-    // A worry is 'Ready to Open' when timer ends but it hasn't been opened yet.
     final isTimerEnded = widget.remainingTime == 'Unlocked';
     final isUnlocked = widget.worry.status == 'revealed' || widget.worry.status == 'kept';
     final isImportant = widget.worry.isImportant;
@@ -378,79 +378,76 @@ class _WorryCardState extends State<_WorryCard> {
 
     if (!isUnlocked) {
       // ── Locked Bin State ──
-      return Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.sp3),
-        padding: const EdgeInsets.all(AppSpacing.sp3),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceStrong,
-          borderRadius: BorderRadius.circular(AppShape.radius),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.bg1,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.delete_outline_rounded, color: AppColors.textMuted, size: 24),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sp3),
-                const Text(
-                  'Locked in bin',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: AppColors.textMuted,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            if (isTimerEnded)
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.sp3),
+        child: GlassCard(
+          padding: const EdgeInsets.all(AppSpacing.sp3),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
               Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  OutlinedButton(
-                    onPressed: () => _showAddTimeDialog(context),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      foregroundColor: AppColors.text,
-                      side: const BorderSide(color: AppColors.border),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.bg1,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.border),
                     ),
-                    child: const Text('Keep Locked', style: TextStyle(fontSize: 12)),
+                    child: const Center(
+                      child: Icon(Icons.delete_outline_rounded, color: AppColors.textMuted, size: 24),
+                    ),
                   ),
-                  const SizedBox(width: AppSpacing.sp2),
-                  ElevatedButton.icon(
-                    onPressed: widget.onOpenBox,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.bg0,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                  const SizedBox(width: AppSpacing.sp3),
+                  const Text(
+                    'Locked in bin',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w500,
                     ),
-                    icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                    label: const Text('Open Bin', style: TextStyle(fontSize: 12)),
                   ),
                 ],
-              )
-            else
-              Text(
-                widget.remainingTime,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: AppColors.accent,
-                  fontWeight: FontWeight.w600,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
               ),
-          ],
+              if (isTimerEnded)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => _showAddTimeDialog(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        foregroundColor: AppColors.text,
+                        side: const BorderSide(color: AppColors.border),
+                      ),
+                      child: const Text('Keep Locked', style: TextStyle(fontSize: 12)),
+                    ),
+                    const SizedBox(width: AppSpacing.sp2),
+                    ElevatedButton.icon(
+                      onPressed: widget.onOpenBox,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.bg0,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                      label: const Text('Open Bin', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                )
+              else
+                Text(
+                  widget.remainingTime,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+            ],
+          ),
         ),
       );
     }
@@ -459,204 +456,196 @@ class _WorryCardState extends State<_WorryCard> {
     return ParticleBurst(
       isBursting: _isBursting,
       onComplete: widget.onRemove,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.sp3),
-        padding: const EdgeInsets.all(AppSpacing.sp3),
-        decoration: BoxDecoration(
-          color: isImportant
-              ? AppColors.accent.withValues(alpha: 0.08)
-              : AppColors.surfaceStrong,
-          borderRadius: BorderRadius.circular(AppShape.radius),
-          border: Border.all(
-            color: isImportant
-                ? AppColors.accent.withValues(alpha: 0.4)
-                : AppColors.border,
-          ),
-        ),
-        child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── 3D Claymorphic Box ──
-              SizedBox(
-                width: 60,
-                height: 60,
-                child: BoxAnimationWidget(
-                  size: 60,
-                  boxState: isUnlocked ? BoxState.open : BoxState.closed,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.sp3),
+        child: GlassCard(
+          color: isImportant ? AppColors.accent.withValues(alpha: 0.08) : null,
+          borderColor: isImportant ? AppColors.accent.withValues(alpha: 0.4) : null,
+          padding: const EdgeInsets.all(AppSpacing.sp3),
+          child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── 3D Claymorphic Box ──
+                SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: BoxAnimationWidget(
+                    size: 60,
+                    boxState: isUnlocked ? BoxState.open : BoxState.closed,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sp3),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.sp1),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.worry.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.text,
-                        ),
-                      ),
-                      if (isImportant) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.accent.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
+                const SizedBox(width: AppSpacing.sp3),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.sp1),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.worry.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.text,
                           ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.flag_rounded,
-                                  size: 10, color: AppColors.accent),
-                              SizedBox(width: 4),
-                              Text(
-                                'Important',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.accent,
+                        ),
+                        if (isImportant) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.flag_rounded,
+                                    size: 10, color: AppColors.accent),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Important',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.accent,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                if (!isTimerEnded)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.sp1),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.lock_rounded,
+                          size: 14,
+                          color: AppColors.textMuted,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.remainingTime,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMuted,
+                            fontFeatures: [FontFeature.tabularFigures()],
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-              ),
-              if (!isTimerEnded)
-                Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.sp1),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.lock_rounded,
-                        size: 14,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        widget.remainingTime,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textMuted,
-                          fontFeatures: [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else if (isUnlocked)
-                IconButton(
-                  onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                  icon: Icon(
-                    _isExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                    color: AppColors.accent,
-                  ),
-                  tooltip: _isExpanded ? 'Hide description' : 'Show description',
-                ),
-            ],
-          ),
-
-
-          AnimatedSize(
-            duration: AppDurations.base,
-            curve: Curves.easeInOut,
-            child: _isExpanded && widget.worry.text.isNotEmpty
-                ? Padding(
-                    padding: const EdgeInsets.only(
-                      top: AppSpacing.sp3,
-                      left: AppSpacing.sp1,
-                      right: AppSpacing.sp1,
                     ),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(AppSpacing.sp3),
-                      decoration: BoxDecoration(
-                        color: AppColors.bg0.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(AppShape.radiusSm),
+                  )
+                else if (isUnlocked)
+                  IconButton(
+                    onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                    icon: Icon(
+                      _isExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                      color: AppColors.accent,
+                    ),
+                    tooltip: _isExpanded ? 'Hide description' : 'Show description',
+                  ),
+              ],
+            ),
+
+            AnimatedSize(
+              duration: AppDurations.base,
+              curve: Curves.easeInOut,
+              child: _isExpanded && widget.worry.text.isNotEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.only(
+                        top: AppSpacing.sp3,
+                        left: AppSpacing.sp1,
+                        right: AppSpacing.sp1,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.worry.text,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.text,
-                              height: 1.4,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.sp3),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                widget.worry.relativeTime,
-                                style: const TextStyle(
-                                    fontSize: 11, color: AppColors.textMuted),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.sp3),
+                        decoration: BoxDecoration(
+                          color: AppColors.bg0.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(AppShape.radiusSm),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.worry.text,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.text,
+                                height: 1.4,
                               ),
-                              Row(
-                                children: [
-                                  TextButton.icon(
-                                    onPressed: widget.onToggleImportant,
-                                    icon: Icon(
-                                      isImportant ? Icons.flag_rounded : Icons.flag_outlined,
-                                      size: 16,
-                                      color: isImportant
-                                          ? AppColors.accent
-                                          : AppColors.textMuted,
-                                    ),
-                                    label: Text(
-                                      isImportant ? 'Important' : 'Mark',
-                                      style: TextStyle(
-                                        fontSize: 12,
+                            ),
+                            const SizedBox(height: AppSpacing.sp3),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  widget.worry.relativeTime,
+                                  style: const TextStyle(
+                                      fontSize: 11, color: AppColors.textMuted),
+                                ),
+                                Row(
+                                  children: [
+                                    TextButton.icon(
+                                      onPressed: widget.onToggleImportant,
+                                      icon: Icon(
+                                        isImportant ? Icons.flag_rounded : Icons.flag_outlined,
+                                        size: 16,
                                         color: isImportant
                                             ? AppColors.accent
                                             : AppColors.textMuted,
-                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      label: Text(
+                                        isImportant ? 'Important' : 'Mark',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isImportant
+                                              ? AppColors.accent
+                                              : AppColors.textMuted,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.sp1),
-                                  TextButton.icon(
-                                    onPressed: () {
-                                      setState(() => _isBursting = true);
-                                    },
-                                    icon: const Icon(Icons.close_rounded,
-                                        size: 16, color: AppColors.error),
-                                    label: const Text(
-                                      'Let go',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.error,
-                                        fontWeight: FontWeight.w600,
+                                    const SizedBox(width: AppSpacing.sp1),
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        setState(() => _isBursting = true);
+                                      },
+                                      icon: const Icon(Icons.close_rounded,
+                                          size: 16, color: AppColors.error),
+                                      label: const Text(
+                                        'Let go',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.error,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    ));
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      )),
+    );
   }
 }

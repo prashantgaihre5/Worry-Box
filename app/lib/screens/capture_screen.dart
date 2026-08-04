@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
 import '../l10n/app_strings.dart';
 import '../services/storage.dart';
 import '../services/audio_service.dart';
 import '../theme.dart';
+import '../widgets/glass_card.dart';
 
 class CaptureScreen extends StatefulWidget {
   final StorageService storage;
@@ -27,9 +27,14 @@ class CaptureScreen extends StatefulWidget {
   State<CaptureScreen> createState() => _CaptureScreenState();
 }
 
-class _CaptureScreenState extends State<CaptureScreen> {
+class _CaptureScreenState extends State<CaptureScreen> with SingleTickerProviderStateMixin {
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
+  
+  late AnimationController _dropController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   static const List<_DurationOption> _durationOptions = [
     _DurationOption('1 min', 60),
@@ -48,7 +53,27 @@ class _CaptureScreenState extends State<CaptureScreen> {
   String get _locale => widget.locale;
 
   @override
+  void initState() {
+    super.initState();
+    _dropController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.05).animate(
+      CurvedAnimation(parent: _dropController, curve: Curves.easeInBack),
+    );
+    _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _dropController, curve: Curves.easeIn),
+    );
+    // Slide up into the box which is above the input
+    _slideAnimation = Tween<Offset>(begin: Offset.zero, end: const Offset(0, -1.2)).animate(
+      CurvedAnimation(parent: _dropController, curve: Curves.easeInBack),
+    );
+  }
+
+  @override
   void dispose() {
+    _dropController.dispose();
     _titleController.dispose();
     _descController.dispose();
     super.dispose();
@@ -58,6 +83,9 @@ class _CaptureScreenState extends State<CaptureScreen> {
     final title = _titleController.text.trim();
     final desc = _descController.text.trim();
     if (title.isEmpty) return;
+    
+    // Start the drop animation
+    await _dropController.forward();
 
     try {
       await widget.storage.addWorryWithDuration(
@@ -70,6 +98,9 @@ class _CaptureScreenState extends State<CaptureScreen> {
       _descController.clear();
       FocusScope.of(context).unfocus();
       
+      // Reset animation for next time
+      _dropController.reset();
+      
       // Navigate to Locked Screen
       widget.onWorryAdded(title);
     } catch (e) {
@@ -81,30 +112,27 @@ class _CaptureScreenState extends State<CaptureScreen> {
     }
   }
 
+  void _addExample(String text) {
+    if (_titleController.text.isEmpty) {
+      _titleController.text = text;
+    } else {
+      _titleController.text += ' $text';
+    }
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sp6,
-        vertical: AppSpacing.sp8,
+        vertical: AppSpacing.sp6,
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: widget.onToggleLocale,
-                child: Text(
-                  AppStrings.get('languageToggle', locale: _locale),
-                  style: const TextStyle(color: AppColors.accent),
-                ),
-              ),
-            ],
-          ),
-
           const SizedBox(height: AppSpacing.sp4),
-
+          
+          // Title and Box Icon
           GestureDetector(
             onLongPress: widget.onToggleDevMode,
             child: Text(
@@ -119,44 +147,89 @@ class _CaptureScreenState extends State<CaptureScreen> {
             style: Theme.of(context).textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
-
+          
+          const SizedBox(height: AppSpacing.sp6),
+          // Glowing Box Icon
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.sp4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.15),
+                  blurRadius: 40,
+                  spreadRadius: 10,
+                )
+              ]
+            ),
+            child: const Icon(Icons.all_inbox, size: 64, color: AppColors.accent),
+          ),
+          
           const SizedBox(height: AppSpacing.sp8),
 
-          TextField(
-            controller: _titleController,
-            maxLength: 100,
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              hintText: 'Give it a title (e.g. Work Stress)',
-              counterText: '',
-            ),
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: AppSpacing.sp3),
-          TextField(
-            controller: _descController,
-            maxLines: 3,
-            maxLength: 500,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: AppStrings.get('placeholder', locale: _locale),
-              counterText: _descController.text.length > 450
-                  ? '${_descController.text.length}/500'
-                  : '',
+          // Inputs with Drop Animation
+          AnimatedBuilder(
+            animation: _dropController,
+            builder: (context, child) {
+              return SlideTransition(
+                position: _slideAnimation,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: child,
+                  ),
+                ),
+              );
+            },
+            child: GlassInputCard(
+              isFocused: false, // Could be bound to a FocusNode
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _titleController,
+                    maxLength: 100,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      hintText: 'Give it a title (e.g. Work Stress)',
+                      counterText: '',
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
+                  Divider(height: 1, color: AppColors.border),
+                  TextField(
+                    controller: _descController,
+                    maxLines: 4,
+                    maxLength: 500,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: "What's on your mind? Describe what's troubling you...",
+                      counterText: _descController.text.length > 450
+                          ? '${_descController.text.length}/500'
+                          : '',
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
             ),
           ),
 
           const SizedBox(height: AppSpacing.sp4),
 
-          Container(
+          // Duration Selector
+          GlassCard(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.sp4,
               vertical: AppSpacing.sp3,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceStrong,
-              borderRadius: BorderRadius.circular(AppShape.radiusSm),
-              border: Border.all(color: AppColors.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,32 +295,36 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
           const SizedBox(height: AppSpacing.sp4),
 
+          // Action Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: AppColors.bg1,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppShape.radiusSm),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+              ),
+              onPressed: _titleController.text.trim().isEmpty ? null : _submitWorry,
+              icon: const Icon(Icons.lock_outline, size: 18),
+              label: const Text('Put it away'),
+            ),
+          ),
+          
+          const SizedBox(height: AppSpacing.sp4),
+
+          // Suggestion Pills
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed:
-                      _titleController.text.trim().isEmpty ? null : _submitWorry,
-                  icon: const Icon(Icons.lock_outline, size: 18),
-                  label: Text(AppStrings.get('submitButton', locale: _locale)),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sp3),
-              IconButton(
-                onPressed: () async {
-                  await widget.audio.toggle();
-                  setState(() {});
-                },
-                icon: Icon(
-                  widget.audio.isPlaying
-                      ? Icons.music_off_rounded
-                      : Icons.music_note_rounded,
-                  color: AppColors.accentSoft,
-                ),
-                tooltip: widget.audio.isPlaying
-                    ? AppStrings.get('stopAudio', locale: _locale)
-                    : AppStrings.get('playAudio', locale: _locale),
-              ),
+              Text('+ example:', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+              const SizedBox(width: 8),
+              _buildPill('presentation'),
+              const SizedBox(width: 8),
+              _buildPill('comparison'),
             ],
           ),
 
@@ -265,8 +342,25 @@ class _CaptureScreenState extends State<CaptureScreen> {
       ),
     );
   }
-}
 
+  Widget _buildPill(String text) {
+    return GestureDetector(
+      onTap: () => _addExample(text),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0x12FFFFFF),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: const Color(0x1FFFFFFF)),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(color: Colors.white, fontSize: 12),
+        ),
+      ),
+    );
+  }
+}
 class _DurationOption {
   final String label;
   final int seconds;
