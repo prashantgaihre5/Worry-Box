@@ -130,17 +130,7 @@ class _CaptureScreenState extends State<CaptureScreen> with SingleTickerProvider
       ),
       child: Column(
         children: [
-          const SizedBox(height: AppSpacing.sp4),
-          
-          // Title and Box Icon
-          GestureDetector(
-            onLongPress: widget.onToggleDevMode,
-            child: Text(
-              AppStrings.get('appTitle', locale: _locale),
-              style: Theme.of(context).textTheme.headlineLarge,
-              textAlign: TextAlign.center,
-            ),
-          ),
+
           const SizedBox(height: AppSpacing.sp2),
           Text(
             AppStrings.get('subtitle', locale: _locale),

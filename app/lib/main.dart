@@ -8,6 +8,7 @@ import 'services/state.dart';
 import 'screens/capture_screen.dart';
 import 'screens/locked_screen.dart';
 import 'screens/reveal_screen.dart';
+import 'l10n/app_strings.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -130,6 +131,31 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       home: Scaffold(
+        appBar: AppBar(
+          title: GestureDetector(
+            onLongPress: _toggleDevMode,
+            child: Text(
+              AppStrings.get('appTitle', locale: _locale),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.text,
+              ),
+            ),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            TextButton(
+              onPressed: _toggleLocale,
+              child: Text(
+                AppStrings.get('languageToggle', locale: _locale),
+                style: const TextStyle(color: AppColors.accent),
+              ),
+            ),
+          ],
+        ),
         body: Stack(
           children: [
             // ── Animated gradient background ──
