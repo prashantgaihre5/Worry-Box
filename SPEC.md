@@ -293,6 +293,7 @@ padding. Everything scales up gracefully — no separate desktop layout needed.
 - `<textarea>`, 2 rows, autogrow, placeholder: *What's on your mind?*
 - Character counter appears only past 240/280
 - Primary button: **Put it away** — disabled while input is empty
+- Secondary action / Icon: **Play Calming Audio** — toggles a looping, soothing ambient track to help reduce anxiety while writing or after putting the worry away.
 - Helper line: *Opens at 6:00 PM* (reflects actual setting)
 - Footer: the safety line from §1
 
@@ -304,6 +305,7 @@ padding. Everything scales up gracefully — no separate desktop layout needed.
 - Count: *3 worries put away* (singular/plural correct)
 - **No preview of the text.** Not truncated, not blurred, not in the DOM. If it isn't
   rendered it can't be peeked at via devtools or a screen reader.
+- Consolation message: Briefly display a short, comforting message (e.g., "That's safely put away," or "It's okay to feel this way") immediately after a worry is added, before fading out.
 - Secondary compact input: *Something else? Put it away too.*
 - Tone is reassuring, never punitive. No "you can't open this yet."
 
@@ -407,6 +409,8 @@ When present, `addWorry` sets `unlockAt = Date.now() + (seconds * 1000)`. This m
 Ship when every line passes.
 
 - [ ] **A1** Typing a worry and clicking *Put it away* clears the input, plays the drop + seal, and moves to LOCKED
+- [ ] **A1.1** A short consolation message appears briefly upon moving to LOCKED, then fades away
+- [ ] **A1.2** Clicking the "Play Calming Audio" button toggles the calming background song
 - [ ] **A2** Reloading during LOCKED stays LOCKED with the countdown correct
 - [ ] **A3** Worry text does not appear anywhere in the DOM while locked
 - [ ] **A4** Countdown reaching zero transitions to REVEAL without a reload
