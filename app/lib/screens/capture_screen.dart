@@ -401,7 +401,7 @@ class _WorryCardState extends State<_WorryCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header: Mini Box + Title + Dropdown ──
+          // ── Header: Mini Box + Title + Timer/Dropdown ──
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -415,73 +415,85 @@ class _WorryCardState extends State<_WorryCard> {
                 ),
               ),
               const SizedBox(width: AppSpacing.sp3),
-              // Title & Status
+              // Title
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: AppSpacing.sp1),
-                    Text(
-                      widget.worry.title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.text,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sp1),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.worry.title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.text,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          isUnlocked ? Icons.lock_open_rounded : Icons.lock_rounded,
-                          size: 12,
-                          color: isUnlocked ? AppColors.accentSoft : AppColors.textMuted,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          widget.remainingTime,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: isUnlocked ? AppColors.accentSoft : AppColors.textMuted,
+                      if (isImportant) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                        ),
-                        if (isImportant) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                            child: const Text(
-                              'Important',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.accent,
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.flag_rounded,
+                                  size: 10, color: AppColors.accent),
+                              SizedBox(width: 4),
+                              Text(
+                                'Important',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.accent,
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              // Dropdown button
-              IconButton(
-                onPressed: isUnlocked
-                    ? () => setState(() => _isExpanded = !_isExpanded)
-                    : null, // Disabled when locked
-                icon: Icon(
-                  _isExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                  color: isUnlocked ? AppColors.accent : AppColors.textMuted.withValues(alpha: 0.5),
+              // Right corner: Timer (if locked) OR Dropdown (if unlocked)
+              if (!isUnlocked)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.sp1),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.lock_rounded,
+                        size: 14,
+                        color: AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.remainingTime,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                IconButton(
+                  onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                  icon: Icon(
+                    _isExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                    color: AppColors.accent,
+                  ),
+                  tooltip: _isExpanded ? 'Hide description' : 'Show description',
                 ),
-                tooltip: isUnlocked
-                    ? (_isExpanded ? 'Hide description' : 'Show description')
-                    : 'Locked until timer ends',
-              ),
             ],
           ),
 
@@ -516,50 +528,61 @@ class _WorryCardState extends State<_WorryCard> {
                 : const SizedBox.shrink(),
           ),
 
-          const SizedBox(height: AppSpacing.sp2),
-
-          // ── Footer: Relative Time + Actions ──
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: AppSpacing.sp1),
-                child: Text(
-                  widget.worry.relativeTime,
-                  style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+          // ── Footer: Relative Time + Actions (Only when unlocked) ──
+          if (isUnlocked) ...[
+            const SizedBox(height: AppSpacing.sp2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: AppSpacing.sp1),
+                  child: Text(
+                    widget.worry.relativeTime,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textMuted),
+                  ),
                 ),
-              ),
-              Row(
-                children: [
-                  TextButton.icon(
-                    onPressed: widget.onToggleImportant,
-                    icon: Icon(
-                      isImportant ? Icons.flag_rounded : Icons.flag_outlined,
-                      size: 14,
-                      color: isImportant ? AppColors.accent : AppColors.textMuted,
-                    ),
-                    label: Text(
-                      isImportant ? 'Important' : 'Mark',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isImportant ? AppColors.accent : AppColors.textMuted,
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: widget.onToggleImportant,
+                      icon: Icon(
+                        isImportant ? Icons.flag_rounded : Icons.flag_outlined,
+                        size: 16,
+                        color: isImportant
+                            ? AppColors.accent
+                            : AppColors.textMuted,
+                      ),
+                      label: Text(
+                        isImportant ? 'Important' : 'Mark',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isImportant
+                              ? AppColors.accent
+                              : AppColors.textMuted,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sp1),
-                  TextButton.icon(
-                    onPressed: widget.onRemove,
-                    icon: const Icon(Icons.close_rounded,
-                        size: 14, color: AppColors.error),
-                    label: const Text(
-                      'Remove',
-                      style: TextStyle(fontSize: 11, color: AppColors.error),
+                    const SizedBox(width: AppSpacing.sp1),
+                    TextButton.icon(
+                      onPressed: widget.onRemove,
+                      icon: const Icon(Icons.close_rounded,
+                          size: 16, color: AppColors.error),
+                      label: const Text(
+                        'Remove',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
