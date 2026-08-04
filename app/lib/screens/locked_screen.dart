@@ -120,120 +120,6 @@ class _LockedScreenState extends State<LockedScreen> {
     return SafeArea(
       child: Column(
         children: [
-          // ── Compact Input Form ──
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sp4, vertical: AppSpacing.sp3),
-            decoration: BoxDecoration(
-              color: AppColors.bg0,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.add_circle_outline, size: 16, color: AppColors.accent),
-                    const SizedBox(width: AppSpacing.sp2),
-                    Text(
-                      'Add another problem',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.text,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sp2),
-                
-                // Compact Text Fields
-                TextField(
-                  controller: _titleController,
-                  maxLength: 100,
-                  onChanged: (_) => setState(() {}),
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  decoration: InputDecoration(
-                    hintText: 'Title...',
-                    counterText: '',
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sp2),
-                TextField(
-                  controller: _descController,
-                  maxLines: 2,
-                  maxLength: 500,
-                  onChanged: (_) => setState(() {}),
-                  style: const TextStyle(fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'Description...',
-                    counterText: '',
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sp3),
-                
-                // Compact Timer & Submit Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: _durationOptions.map((option) {
-                            final isSelected = _selectedDuration == option.seconds;
-                            return GestureDetector(
-                              onTap: () => setState(() => _selectedDuration = option.seconds),
-                              child: AnimatedContainer(
-                                duration: AppDurations.fast,
-                                margin: const EdgeInsets.only(right: 6),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? AppColors.accent.withValues(alpha: 0.2) : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: isSelected ? AppColors.accent : AppColors.border,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  option.label,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                    color: isSelected ? AppColors.accent : AppColors.textMuted,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sp2),
-                    ElevatedButton(
-                      onPressed: _titleController.text.trim().isEmpty ? null : _submitWorry,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text('Add', style: TextStyle(fontSize: 13)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
           // ── Worry Cards List ──
           Expanded(
             child: ListView.builder(
@@ -249,6 +135,123 @@ class _LockedScreenState extends State<LockedScreen> {
                   onRemove: () => _removeWorry(worry.id),
                 );
               },
+            ),
+          ),
+
+          // ── Compact Input Form (Anchored to Bottom) ──
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sp4, vertical: AppSpacing.sp3),
+            decoration: BoxDecoration(
+              color: AppColors.bg0,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.add_circle_outline, size: 16, color: AppColors.accent),
+                      const SizedBox(width: AppSpacing.sp2),
+                      Text(
+                        'Add another problem',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.text,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sp2),
+                  
+                  // Compact Text Fields
+                  TextField(
+                    controller: _titleController,
+                    maxLength: 100,
+                    onChanged: (_) => setState(() {}),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    decoration: const InputDecoration(
+                      hintText: 'Title...',
+                      counterText: '',
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sp2),
+                  TextField(
+                    controller: _descController,
+                    maxLines: 2,
+                    maxLength: 500,
+                    onChanged: (_) => setState(() {}),
+                    style: const TextStyle(fontSize: 13),
+                    decoration: const InputDecoration(
+                      hintText: 'Description...',
+                      counterText: '',
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sp3),
+                  
+                  // Compact Timer & Submit Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: _durationOptions.map((option) {
+                              final isSelected = _selectedDuration == option.seconds;
+                              return GestureDetector(
+                                onTap: () => setState(() => _selectedDuration = option.seconds),
+                                child: AnimatedContainer(
+                                  duration: AppDurations.fast,
+                                  margin: const EdgeInsets.only(right: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? AppColors.accent.withValues(alpha: 0.2) : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: isSelected ? AppColors.accent : AppColors.border,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    option.label,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                      color: isSelected ? AppColors.accent : AppColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sp2),
+                      ElevatedButton(
+                        onPressed: _titleController.text.trim().isEmpty ? null : _submitWorry,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Add', style: TextStyle(fontSize: 13)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -313,12 +316,23 @@ class _WorryCardState extends State<_WorryCard> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: 60,
-                height: 60,
-                child: BoxAnimation(
-                  isOpen: _isExpanded,
-                  isSealing: false,
+              // Simple Icon Box instead of BoxAnimation
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: isUnlocked ? AppColors.accent.withValues(alpha: 0.15) : AppColors.bg1,
+                  borderRadius: BorderRadius.circular(AppShape.radiusSm),
+                  border: Border.all(
+                    color: isUnlocked ? AppColors.accent.withValues(alpha: 0.5) : AppColors.border,
+                  ),
+                ),
+                child: Center(
+                  child: Icon(
+                    isUnlocked ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+                    color: isUnlocked ? AppColors.accent : AppColors.textMuted,
+                    size: 24,
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sp3),
