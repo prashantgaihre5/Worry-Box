@@ -182,6 +182,14 @@ class StorageService extends ChangeNotifier {
     return _state.worries.where((w) => w.status == 'kept').toList();
   }
 
+  /// Bookmarked worries whose deadline has passed.
+  List<Worry> getExpiredBookmarks() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return _state.worries
+        .where((w) => w.status == 'kept' && now >= w.unlockAt)
+        .toList();
+  }
+
   /// Earliest unlockAt among pending worries, or null.
   int? nextUnlockAt() {
     final pending = getPendingWorries();
@@ -214,11 +222,21 @@ class StorageService extends ChangeNotifier {
     }
   }
 
-  /// Archives the worry (status → "kept").
-  Future<void> keepWorry(String id) async {
+  /// Archives the worry (status → "kept") and sets a custom deadline.
+  Future<void> keepWorryWithDeadline(String id, int deadlineMs) async {
     final idx = _state.worries.indexWhere((w) => w.id == id);
     if (idx == -1) return;
     _state.worries[idx].status = 'kept';
+    _state.worries[idx].unlockAt = deadlineMs;
+    await _saveState();
+    notifyListeners();
+  }
+
+  /// Extends the deadline for an already kept worry.
+  Future<void> extendBookmarkDeadline(String id, int newDeadlineMs) async {
+    final idx = _state.worries.indexWhere((w) => w.id == id && w.status == 'kept');
+    if (idx == -1) return;
+    _state.worries[idx].unlockAt = newDeadlineMs;
     await _saveState();
     notifyListeners();
   }

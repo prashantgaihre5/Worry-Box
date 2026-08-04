@@ -9,12 +9,14 @@ class RevealScreen extends StatefulWidget {
   final StorageService storage;
   final String locale;
   final VoidCallback onAllCleared;
+  final VoidCallback onNavigateToCapture;
 
   const RevealScreen({
     super.key,
     required this.storage,
     required this.locale,
     required this.onAllCleared,
+    required this.onNavigateToCapture,
   });
 
   @override
@@ -57,7 +59,48 @@ class _RevealScreenState extends State<RevealScreen> {
   }
 
   Future<void> _keep(String id) async {
-    await widget.storage.keepWorry(id);
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+      builder: (context, child) => Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: Color(0xFF60A5FA),
+            onPrimary: Colors.white,
+            surface: Color(0xFF151D3B),
+            onSurface: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (date == null) return;
+    if (!mounted) return;
+    
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 1))),
+      builder: (context, child) => Theme(
+        data: ThemeData.dark().copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: Color(0xFF60A5FA),
+            onPrimary: Colors.white,
+            surface: Color(0xFF151D3B),
+            onSurface: Colors.white,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (time == null) return;
+
+    final deadline = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    final finalDeadline = deadline.isBefore(now) ? now.add(const Duration(minutes: 1)) : deadline;
+
+    await widget.storage.keepWorryWithDeadline(id, finalDeadline.millisecondsSinceEpoch);
     _refreshWorries();
   }
   
@@ -150,21 +193,23 @@ class _RevealScreenState extends State<RevealScreen> {
             border: const Border(top: BorderSide(color: Color(0x0DFFFFFF))),
           ),
           child: ElevatedButton.icon(
-            onPressed: widget.onAllCleared, // routes back to capture
+            onPressed: widget.onNavigateToCapture,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0x0DFFFFFF),
-              foregroundColor: const Color(0xFFBFDBFE),
+              backgroundColor: AppColors.accent.withValues(alpha: 0.15),
+              foregroundColor: AppColors.accentSoft,
               shadowColor: Colors.transparent,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: Color(0x1AFFFFFF)),
+                side: BorderSide(
+                  color: AppColors.accent.withValues(alpha: 0.4),
+                )
               ),
             ),
-            icon: const Icon(Icons.add_circle_outline, size: 16),
-            label: Text(
-              AppStrings.get('writeNew', locale: _locale),
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text(
+              'Add',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
             ),
           ),
         ),

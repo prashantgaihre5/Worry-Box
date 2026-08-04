@@ -13,6 +13,7 @@ class LockedScreen extends StatefulWidget {
   final AudioService audio;
   final String locale;
   final VoidCallback onStateChange;
+  final VoidCallback onNavigateToCapture;
 
   const LockedScreen({
     super.key,
@@ -20,6 +21,7 @@ class LockedScreen extends StatefulWidget {
     required this.audio,
     required this.locale,
     required this.onStateChange,
+    required this.onNavigateToCapture,
   });
 
   @override
@@ -28,7 +30,6 @@ class LockedScreen extends StatefulWidget {
 
 class _LockedScreenState extends State<LockedScreen> {
   Timer? _ticker;
-  final _quickInputController = TextEditingController();
 
   String get _locale => widget.locale;
 
@@ -43,32 +44,7 @@ class _LockedScreenState extends State<LockedScreen> {
   @override
   void dispose() {
     _ticker?.cancel();
-    _quickInputController.dispose();
     super.dispose();
-  }
-
-  Future<void> _quickAdd() async {
-    final text = _quickInputController.text.trim();
-    if (text.isEmpty) return;
-
-    try {
-      await widget.storage.addWorry(text);
-      _quickInputController.clear();
-      FocusScope.of(context).unfocus();
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Added to your locked Worry Box')),
-        );
-        setState(() {});
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
-    }
   }
 
   String _formatTime(int totalSeconds) {
@@ -232,70 +208,28 @@ class _LockedScreenState extends State<LockedScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Quick Add
+          // Add Button (routes to Capture)
           SizedBox(
             width: double.infinity,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppStrings.get('somethingElse', locale: _locale),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFFBFDBFE).withValues(alpha: 0.6),
-                  ),
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                backgroundColor: AppColors.accent.withValues(alpha: 0.15),
+                foregroundColor: AppColors.accentSoft,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: AppColors.accent.withValues(alpha: 0.4),
+                  )
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.glassInputBg,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: TextField(
-                          controller: _quickInputController,
-                          onChanged: (_) => setState(() {}),
-                          onSubmitted: (_) => _quickAdd(),
-                          decoration: InputDecoration(
-                            hintText: 'Quick capture...',
-                            hintStyle: TextStyle(color: const Color(0xFFBFDBFE).withValues(alpha: 0.4)),
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            filled: false,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          ),
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                        backgroundColor: _quickInputController.text.trim().isNotEmpty 
-                            ? AppColors.accent.withValues(alpha: 0.5) 
-                            : Colors.white.withValues(alpha: 0.05),
-                        foregroundColor: _quickInputController.text.trim().isNotEmpty ? const Color(0xFFDBEAFE) : Colors.grey,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: _quickInputController.text.trim().isNotEmpty
-                                ? AppColors.accent.withValues(alpha: 0.4)
-                                : Colors.white.withValues(alpha: 0.05),
-                          )
-                        ),
-                      ),
-                      onPressed: _quickInputController.text.trim().isEmpty ? null : _quickAdd,
-                      child: Text(AppStrings.get('quickPutAway', locale: _locale)),
-                    ),
-                  ],
-                ),
-              ],
+              ),
+              onPressed: widget.onNavigateToCapture,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text(
+                'Add',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
             ),
           ),
         ],
