@@ -2,6 +2,8 @@
 ///
 /// Holds the settings and the list of worries.
 /// Serialized to/from JSON for SharedPreferences persistence.
+library;
+
 import 'worry.dart';
 
 class AppState {
