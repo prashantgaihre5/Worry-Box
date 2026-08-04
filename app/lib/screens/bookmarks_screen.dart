@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/worry.dart';
 import '../services/storage.dart';
 import '../theme.dart';
-import 'package:intl/intl.dart';
 
 class BookmarksScreen extends StatefulWidget {
   final StorageService storage;
@@ -184,13 +184,15 @@ class _BookmarkCard extends StatelessWidget {
     required this.onExtend,
   });
 
-  String _formatTime(int totalSeconds) {
-    if (totalSeconds <= 0) return '0h 0m 00s';
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    final seconds = totalSeconds % 60;
-    final sStr = seconds < 10 ? '0$seconds' : '$seconds';
-    return '${hours}h ${minutes}m ${sStr}s';
+  String _formatDateTime(int epochMs) {
+    final dt = DateTime.fromMillisecondsSinceEpoch(epochMs);
+    final isToday = dt.year == DateTime.now().year && dt.month == DateTime.now().month && dt.day == DateTime.now().day;
+    final isTomorrow = dt.year == DateTime.now().year && dt.month == DateTime.now().month && dt.day == DateTime.now().day + 1;
+    
+    final timeStr = DateFormat('h:mm a').format(dt);
+    if (isToday) return 'Today at $timeStr';
+    if (isTomorrow) return 'Tomorrow at $timeStr';
+    return DateFormat('MMM d, y • h:mm a').format(dt);
   }
 
   @override
@@ -198,8 +200,7 @@ class _BookmarkCard extends StatelessWidget {
     final dateStr = DateFormat('M/d/yyyy').format(DateTime.fromMillisecondsSinceEpoch(worry.createdAt));
     
     final remainingMs = worry.unlockAt - DateTime.now().millisecondsSinceEpoch;
-    final remainingSeconds = remainingMs > 0 ? remainingMs ~/ 1000 : 0;
-    final isExpired = remainingSeconds <= 0;
+    final isExpired = remainingMs <= 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -237,7 +238,7 @@ class _BookmarkCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      isExpired ? 'NEEDS REVIEW' : _formatTime(remainingSeconds),
+                      isExpired ? 'NEEDS REVIEW' : _formatDateTime(worry.unlockAt),
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,

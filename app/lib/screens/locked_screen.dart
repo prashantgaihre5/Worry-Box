@@ -59,12 +59,12 @@ class _LockedScreenState extends State<LockedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final activeWorries = widget.storage.getWorries().where((w) => w.status != 'released').toList();
-    if (activeWorries.isEmpty) return const SizedBox.shrink();
+    final lockedWorries = widget.storage.getWorries().where((w) => w.status == 'locked').toList();
+    if (lockedWorries.isEmpty) return const SizedBox.shrink();
 
     // Find the closest unlock time
-    activeWorries.sort((a, b) => a.unlockAt.compareTo(b.unlockAt));
-    final closestWorry = activeWorries.first;
+    lockedWorries.sort((a, b) => a.unlockAt.compareTo(b.unlockAt));
+    final closestWorry = lockedWorries.first;
     final remainingMs = closestWorry.unlockAt - DateTime.now().millisecondsSinceEpoch;
     final remainingSeconds = remainingMs > 0 ? remainingMs ~/ 1000 : 0;
     
@@ -72,7 +72,7 @@ class _LockedScreenState extends State<LockedScreen> {
     if (remainingSeconds <= 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         // Mark all ready worries as revealed and change state
-        for (var w in activeWorries) {
+        for (var w in lockedWorries) {
           if (w.unlockAt <= DateTime.now().millisecondsSinceEpoch) {
             widget.storage.markRevealed(w.id);
           }
@@ -81,7 +81,7 @@ class _LockedScreenState extends State<LockedScreen> {
       });
     }
 
-    final worriesCountText = AppStrings.get('worriesCount', locale: _locale).replaceAll('{count}', '${activeWorries.length}');
+    final worriesCountText = AppStrings.get('worriesCount', locale: _locale).replaceAll('{count}', '${lockedWorries.length}');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),

@@ -12,6 +12,7 @@ import 'screens/meditation_screen.dart';
 import 'screens/archive_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'widgets/animated_background.dart';
+import 'widgets/expired_bookmarks_banner.dart';
 import 'l10n/app_strings.dart';
 import 'models/worry.dart';
 import 'dart:async';
@@ -41,7 +42,6 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
   late String _locale;
   String? _lastAddedWorryText;
   String _activeSection = 'home';
-  Timer? _expirationTimer;
 
   ViewState get _effectiveView => _manualOverrideView ?? _currentView;
 
@@ -54,15 +54,10 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
 
     // Listen to storage changes and re-derive view state.
     widget.storage.addListener(_onStorageChanged);
-    
-    _expirationTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
   void dispose() {
-    _expirationTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     widget.storage.removeListener(_onStorageChanged);
     _audio.dispose();
@@ -141,12 +136,10 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
   }
 
   static final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorKey: _navigatorKey,
       scaffoldMessengerKey: scaffoldMessengerKey,
       title: 'Abhaya',
       debugShowCheckedModeBanner: false,
@@ -370,147 +363,10 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
                 ),
               ),
 
-            // ── Expired Bookmarks Overlay ──
-            if (widget.storage.getExpiredBookmarks().isNotEmpty)
-              _buildExpiredOverlay(),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildExpiredOverlay() {
-    final expired = widget.storage.getExpiredBookmarks();
-    return Positioned.fill(
-      child: Container(
-        color: const Color(0xE60B1020), // Dark semi-transparent background
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.notification_important, size: 64, color: Color(0xFFFDA4AF)),
-                const SizedBox(height: 16),
-                const Text(
-                  'Needs Review',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'The following items have passed their deadlines. Please resolve them to continue.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.7)),
-                ),
-                const SizedBox(height: 32),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: expired.length,
-                    itemBuilder: (context, index) {
-                      final w = expired[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xCC1E1B4B),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0x66F43F5E)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              w.title.isNotEmpty ? w.title : w.text,
-                              style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w500),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () => widget.storage.removeWorry(w.id),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0x3310B981),
-                                      foregroundColor: const Color(0xFF6EE7B7),
-                                    ),
-                                    icon: const Icon(Icons.check, size: 16),
-                                    label: const Text('Mark Done', style: TextStyle(fontSize: 12)),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () => _extendDeadline(w.id),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0x3360A5FA),
-                                      foregroundColor: const Color(0xFF93C5FD),
-                                    ),
-                                    icon: const Icon(Icons.edit_calendar, size: 16),
-                                    label: const Text('Extend', style: TextStyle(fontSize: 12)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _extendDeadline(String id) async {
-    final navContext = _navigatorKey.currentContext;
-    if (navContext == null) return;
-    
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: navContext,
-      initialDate: now,
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
-      builder: (context, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF60A5FA),
-            onPrimary: Colors.white,
-            surface: Color(0xFF151D3B),
-            onSurface: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
-    );
-    if (date == null) return;
-    if (!mounted) return;
-    
-    final time = await showTimePicker(
-      context: navContext,
-      initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 1))),
-      builder: (context, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF60A5FA),
-            onPrimary: Colors.white,
-            surface: Color(0xFF151D3B),
-            onSurface: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
-    );
-    if (time == null) return;
-
-    final deadline = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    final finalDeadline = deadline.isBefore(now) ? now.add(const Duration(minutes: 1)) : deadline;
-
-    await widget.storage.extendBookmarkDeadline(id, finalDeadline.millisecondsSinceEpoch);
   }
 
   Widget _buildSectionContent() {
@@ -556,6 +412,8 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
     return Column(
       key: const ValueKey('home'),
       children: [
+        // Expired bookmarks banner — inline in home screen
+        ExpiredBookmarksBanner(storage: widget.storage),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           child: Container(

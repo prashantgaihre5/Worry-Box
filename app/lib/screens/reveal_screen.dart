@@ -46,13 +46,19 @@ class _RevealScreenState extends State<RevealScreen> {
   }
   
   void _refreshWorries() {
+    final updated = widget.storage.getWorries()
+        .where((w) => w.status == 'revealed')
+        .toList();
+    updated.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     setState(() {
-      _worries = widget.storage.getWorries()
-          .where((w) => w.status == 'revealed' || w.status == 'kept')
-          .toList();
-      // Sort newest first
-      _worries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _worries = updated;
     });
+    // If nothing left to reveal, go back to home
+    if (updated.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onAllCleared();
+      });
+    }
   }
 
   Future<void> _release(String id) async {
