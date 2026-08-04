@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'theme.dart';
 import 'services/storage.dart';
@@ -234,8 +236,8 @@ class _AnimatedBackgroundState extends State<_AnimatedBackground>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 20),
-    )..repeat(reverse: true);
+      duration: const Duration(seconds: 15),
+    )..repeat();
   }
 
   @override
@@ -246,31 +248,60 @@ class _AnimatedBackgroundState extends State<_AnimatedBackground>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment(
-                0.5 + _controller.value * 0.5,
-                1.0 - _controller.value * 0.3,
-              ),
-              colors: const [
-                AppColors.bg0,
-                AppColors.bg1,
-                AppColors.bg0,
-              ],
-              stops: [
-                0.0,
-                0.3 + _controller.value * 0.4,
-                1.0,
-              ],
-            ),
-          ),
-        );
-      },
+    return Stack(
+      children: [
+        // Dark base
+        Container(color: AppColors.bg0),
+        // Moving Orbs
+        AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return CustomPaint(
+              painter: _OrbsPainter(_controller.value),
+              size: Size.infinite,
+            );
+          },
+        ),
+        // Heavy glass blur layer
+        BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+          child: Container(color: Colors.black.withValues(alpha: 0.1)),
+        ),
+      ],
     );
   }
+}
+
+class _OrbsPainter extends CustomPainter {
+  final double progress;
+  _OrbsPainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    
+    // Animate positions using sine waves for organic movement
+    final double t = progress * 2 * math.pi;
+
+    // Orb 1: Purple
+    paint.color = AppColors.orb1;
+    final cx1 = size.width * (0.5 + 0.3 * math.sin(t));
+    final cy1 = size.height * (0.3 + 0.2 * math.cos(t * 0.8));
+    canvas.drawCircle(Offset(cx1, cy1), size.width * 0.4, paint);
+
+    // Orb 2: Cyan
+    paint.color = AppColors.orb2;
+    final cx2 = size.width * (0.2 + 0.4 * math.cos(t * 1.2));
+    final cy2 = size.height * (0.7 + 0.2 * math.sin(t * 0.9));
+    canvas.drawCircle(Offset(cx2, cy2), size.width * 0.35, paint);
+
+    // Orb 3: Pink
+    paint.color = AppColors.orb3;
+    final cx3 = size.width * (0.8 + 0.2 * math.sin(t * 1.5));
+    final cy3 = size.height * (0.8 + 0.1 * math.cos(t * 1.1));
+    canvas.drawCircle(Offset(cx3, cy3), size.width * 0.3, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrbsPainter oldDelegate) => oldDelegate.progress != progress;
 }

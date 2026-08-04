@@ -6,6 +6,7 @@ import '../services/storage.dart';
 import '../services/audio_service.dart';
 import '../theme.dart';
 import '../widgets/box_animation.dart';
+import '../widgets/particle_burst.dart';
 import 'dart:ui'; // for FontFeature
 
 class LockedScreen extends StatefulWidget {
@@ -38,6 +39,8 @@ class _LockedScreenState extends State<LockedScreen> {
     _DurationOption('1h', 3600),
     _DurationOption('3h', 10800),
     _DurationOption('12h', 43200),
+    _DurationOption('1w', 604800),
+    _DurationOption('1M', 2592000),
   ];
   int _selectedDuration = 300;
 
@@ -120,6 +123,36 @@ class _LockedScreenState extends State<LockedScreen> {
     return SafeArea(
       child: Column(
         children: [
+          // ── Insights Header ──
+          if (widget.storage.state.totalWorriesCreated > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.sp4, AppSpacing.sp4, AppSpacing.sp4, 0),
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.sp3),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceStrong,
+                  borderRadius: BorderRadius.circular(AppShape.radius),
+                  border: Border.all(color: AppColors.borderHighlight),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.insights_rounded, color: AppColors.accentSoft, size: 20),
+                    const SizedBox(width: AppSpacing.sp3),
+                    Expanded(
+                      child: Text(
+                        '${((widget.storage.state.totalWorriesReleased / widget.storage.state.totalWorriesCreated) * 100).toInt()}% of your worries were let go. You are doing great!',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.text,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           // ── Worry Cards List ──
           Expanded(
             child: ListView.builder(
@@ -298,6 +331,7 @@ class _WorryCard extends StatefulWidget {
 
 class _WorryCardState extends State<_WorryCard> {
   bool _isExpanded = false;
+  bool _isBursting = false;
 
   void _showAddTimeDialog(BuildContext context) {
     showDialog(
@@ -314,6 +348,8 @@ class _WorryCardState extends State<_WorryCard> {
               _DurationOption('1h', 3600),
               _DurationOption('3h', 10800),
               _DurationOption('12h', 43200),
+              _DurationOption('1w', 604800),
+              _DurationOption('1M', 2592000),
             ].map((opt) => ActionChip(
               backgroundColor: AppColors.surface,
               side: const BorderSide(color: AppColors.border),
@@ -341,43 +377,36 @@ class _WorryCardState extends State<_WorryCard> {
       _isExpanded = false;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sp3),
-      padding: const EdgeInsets.all(AppSpacing.sp3),
-      decoration: BoxDecoration(
-        color: isImportant
-            ? AppColors.accent.withValues(alpha: 0.08)
-            : AppColors.surfaceStrong,
-        borderRadius: BorderRadius.circular(AppShape.radius),
-        border: Border.all(
+    return ParticleBurst(
+      isBursting: _isBursting,
+      onComplete: widget.onRemove,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sp3),
+        padding: const EdgeInsets.all(AppSpacing.sp3),
+        decoration: BoxDecoration(
           color: isImportant
-              ? AppColors.accent.withValues(alpha: 0.4)
-              : AppColors.border,
+              ? AppColors.accent.withValues(alpha: 0.08)
+              : AppColors.surfaceStrong,
+          borderRadius: BorderRadius.circular(AppShape.radius),
+          border: Border.all(
+            color: isImportant
+                ? AppColors.accent.withValues(alpha: 0.4)
+                : AppColors.border,
+          ),
         ),
-      ),
-      child: Column(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Simple Icon Box instead of BoxAnimation
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: isUnlocked ? AppColors.accent.withValues(alpha: 0.15) : AppColors.bg1,
-                  borderRadius: BorderRadius.circular(AppShape.radiusSm),
-                  border: Border.all(
-                    color: isUnlocked ? AppColors.accent.withValues(alpha: 0.5) : AppColors.border,
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    isUnlocked ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
-                    color: isUnlocked ? AppColors.accent : AppColors.textMuted,
-                    size: 24,
-                  ),
+              // ── 3D Claymorphic Box ──
+              SizedBox(
+                width: 60,
+                height: 60,
+                child: BoxAnimationWidget(
+                  size: 60,
+                  boxState: isUnlocked ? BoxState.open : BoxState.closed,
                 ),
               ),
               const SizedBox(width: AppSpacing.sp3),
@@ -576,11 +605,13 @@ class _WorryCardState extends State<_WorryCard> {
                                   ),
                                   const SizedBox(width: AppSpacing.sp1),
                                   TextButton.icon(
-                                    onPressed: widget.onRemove,
+                                    onPressed: () {
+                                      setState(() => _isBursting = true);
+                                    },
                                     icon: const Icon(Icons.close_rounded,
                                         size: 16, color: AppColors.error),
                                     label: const Text(
-                                      'Remove',
+                                      'Let go',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: AppColors.error,
@@ -600,6 +631,6 @@ class _WorryCardState extends State<_WorryCard> {
           ),
         ],
       ),
-    );
+    ));
   }
 }

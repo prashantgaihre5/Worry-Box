@@ -135,6 +135,7 @@ class StorageService extends ChangeNotifier {
       durationSeconds: durationSeconds,
     );
     _state.worries.insert(0, worry);
+    _state.totalWorriesCreated++;
     await _saveState();
     notifyListeners();
     return worry;
@@ -180,11 +181,15 @@ class StorageService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Deletes the worry from the list entirely.
+  /// Deletes the worry from the list entirely and increments released counter.
   Future<void> releaseWorry(String id) async {
+    final initialCount = _state.worries.length;
     _state.worries.removeWhere((w) => w.id == id);
-    await _saveState();
-    notifyListeners();
+    if (_state.worries.length < initialCount) {
+      _state.totalWorriesReleased++;
+      await _saveState();
+      notifyListeners();
+    }
   }
 
   /// Archives the worry (status → "kept").
@@ -247,6 +252,8 @@ class StorageService extends ChangeNotifier {
       settings:
           _state.settings.copyWith(unlockHour: hour, unlockMinute: minute),
       worries: _state.worries,
+      totalWorriesCreated: _state.totalWorriesCreated,
+      totalWorriesReleased: _state.totalWorriesReleased,
     );
     await _saveState();
     notifyListeners();
@@ -258,6 +265,8 @@ class StorageService extends ChangeNotifier {
       schemaVersion: _state.schemaVersion,
       settings: _state.settings.copyWith(locale: locale),
       worries: _state.worries,
+      totalWorriesCreated: _state.totalWorriesCreated,
+      totalWorriesReleased: _state.totalWorriesReleased,
     );
     await _saveState();
     notifyListeners();

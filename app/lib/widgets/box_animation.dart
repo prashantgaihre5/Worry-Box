@@ -2,35 +2,31 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'dart:math' as math;
 
-/// The visual box/lid widget used across CAPTURE, LOCKED, and REVEAL screens.
-///
-/// States:
-///   - [isOpen] = true  → lid is open (CAPTURE / REVEAL)
-///   - [isOpen] = false → lid is closed with padlock (LOCKED)
-///   - [isSealing] = true → animate the seal sequence (after submit)
-class BoxAnimation extends StatefulWidget {
-  final bool isOpen;
-  final bool isSealing;
-  final VoidCallback? onSealComplete;
+enum BoxState { open, closing, closed }
 
-  const BoxAnimation({
+class BoxAnimationWidget extends StatefulWidget {
+  final BoxState boxState;
+  final VoidCallback? onSealComplete;
+  final VoidCallback? onOpenComplete;
+  final double size;
+
+  const BoxAnimationWidget({
     super.key,
-    this.isOpen = true,
-    this.isSealing = false,
+    required this.boxState,
     this.onSealComplete,
+    this.onOpenComplete,
+    this.size = 200,
   });
 
   @override
-  State<BoxAnimation> createState() => _BoxAnimationState();
+  State<BoxAnimationWidget> createState() => _BoxAnimationWidgetState();
 }
 
-class _BoxAnimationState extends State<BoxAnimation>
-    with TickerProviderStateMixin {
-  late AnimationController _sealController;
-  late AnimationController _glowController;
+class _BoxAnimationWidgetState extends State<BoxAnimationWidget> with TickerProviderStateMixin {
+  late AnimationController _controller;
   late Animation<double> _lidAngle;
   late Animation<double> _lockOpacity;
-  late Animation<double> _glowAnimation;
+  late AnimationController _glowController;
 
   @override
   void initState() {
