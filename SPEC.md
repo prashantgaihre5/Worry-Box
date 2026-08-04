@@ -45,6 +45,7 @@ user's thoughts. Include a quiet, non-alarming footer line on the capture view:
 | Language | **Dart** |
 | Persistence | **`shared_preferences`** package |
 | Audio | **`audioplayers`** package (for the calming background audio) |
+| Localization| **`flutter_localizations`** and **`intl`** packages (English / Nepali) |
 | Fonts | System stack first; optional self-hosted Inter in `pubspec.yaml` |
 
 Rationale: Flutter provides a high-performance cross-platform engine with beautiful, smooth animations out of the box.
@@ -220,6 +221,7 @@ Background is a slow, animated gradient between `bg0` and `bg1`.
 - `TextField`, multiline, placeholder: *What's on your mind?*
 - Primary button: **Put it away** — disabled while input is empty
 - Secondary action / Icon: **Play Calming Audio** — toggles a looping, soothing ambient track using `audioplayers` package.
+- Header Action / Icon: **Language Toggle** — switches the app language between English and Nepali dynamically.
 - Helper line: *Opens at 6:00 PM*
 - Footer: safety line.
 
@@ -287,6 +289,7 @@ If active, `addWorry` sets `unlockAt = DateTime.now().add(Duration(seconds: 10))
 - [ ] **A1** Typing a worry and tapping *Put it away* clears the input, plays the drop + seal, and moves to LOCKED
 - [ ] **A1.1** A short consolation message appears briefly upon moving to LOCKED (e.g. via SnackBar)
 - [ ] **A1.2** Tapping the "Play Calming Audio" button toggles the calming background song
+- [ ] **A1.3** Tapping the Language Toggle successfully switches all UI text between English and Nepali
 - [ ] **A2** App restarts during LOCKED stay LOCKED with the countdown correct
 - [ ] **A3** Worry text is completely hidden in the UI while locked
 - [ ] **A4** Countdown reaching zero transitions to REVEAL seamlessly
