@@ -416,10 +416,7 @@ class _WorryCardState extends State<_WorryCard> {
             ),
             if (isTimerEnded)
               ElevatedButton.icon(
-                onPressed: () {
-                  widget.storage.markRevealed(widget.worry.id);
-                  setState(() {});
-                },
+                onPressed: widget.onOpenBox,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
                   foregroundColor: AppColors.bg0,
@@ -556,59 +553,6 @@ class _WorryCardState extends State<_WorryCard> {
             ],
           ),
 
-          // ── Choice Prompt when Timer Ends ──
-          if (isReadyToOpen)
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.sp3),
-              child: Container(
-                padding: const EdgeInsets.all(AppSpacing.sp3),
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppShape.radiusSm),
-                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'Timer ended. What would you like to do?',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.text,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.sp3),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: widget.onOpenBox,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                            ),
-                            child: const Text('Open Box', style: TextStyle(fontSize: 13)),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sp2),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => _showAddTimeDialog(context),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.text,
-                              side: const BorderSide(color: AppColors.border),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                            ),
-                            child: const Text('Keep Locked', style: TextStyle(fontSize: 13)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
 
           AnimatedSize(
             duration: AppDurations.base,

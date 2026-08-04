@@ -9,6 +9,12 @@ class AppColors {
   static const surface = Color(0x0FFFFFFF); // 6% white
   static const surfaceStrong = Color(0x1AFFFFFF); // 10% white
   static const border = Color(0x26FFFFFF); // 15% white
+  static const borderHighlight = Color(0x40FFFFFF); // Specular highlight
+
+  // Vibrant Orbs (for backdrop/particles)
+  static const orb1 = Color(0xFF7B61FF); // Vibrant purple
+  static const orb2 = Color(0xFF45B0E5); // Bright cyan
+  static const orb3 = Color(0xFFFF5288); // Hot pink
 
   static const text = Color(0xFFEAEEF7);
   static const textMuted = Color(0xFF97A3C4);
