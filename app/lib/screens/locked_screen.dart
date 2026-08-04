@@ -379,60 +379,15 @@ class _WorryCardState extends State<_WorryCard> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.bg1,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.delete_outline_rounded, color: AppColors.textMuted, size: 26),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: AppColors.bg1,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.border, width: 1),
-                      ),
-                      child: const Icon(Icons.lock, color: AppColors.accent, size: 10),
-                    ),
-                  ),
-                ],
+            SizedBox(
+              width: 80,
+              height: 80,
+              child: BoxAnimationWidget(
+                boxState: isTimerEnded ? BoxState.open : BoxState.closed,
+                size: 80,
               ),
             ),
-            if (isTimerEnded)
-              Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.bg1,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.delete_outline_rounded, color: AppColors.textMuted, size: 24),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sp3),
-                  const Text(
-                    'Locked in bin',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: AppColors.textMuted,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+
               if (isTimerEnded)
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -454,8 +409,8 @@ class _WorryCardState extends State<_WorryCard> {
                         foregroundColor: AppColors.bg0,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                       ),
-                      icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                      label: const Text('Open Bin', style: TextStyle(fontSize: 12)),
+                      icon: const Icon(Icons.lock_open_rounded, size: 16),
+                      label: const Text('Open Box', style: TextStyle(fontSize: 12)),
                     ),
                   ],
                 )

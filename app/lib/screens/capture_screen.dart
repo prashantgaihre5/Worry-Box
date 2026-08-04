@@ -4,7 +4,7 @@ import '../services/storage.dart';
 import '../services/audio_service.dart';
 import '../widgets/stress_graph.dart';
 import '../theme.dart';
-import '../widgets/glass_card.dart';
+import '../widgets/box_animation.dart';
 
 class CaptureScreen extends StatefulWidget {
   final StorageService storage;
@@ -138,25 +138,19 @@ class _CaptureScreenState extends State<CaptureScreen> with SingleTickerProvider
             style: Theme.of(context).textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
-          
           const SizedBox(height: AppSpacing.sp6),
-          // Glowing Box Icon
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.sp4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accent.withValues(alpha: 0.15),
-                  blurRadius: 40,
-                  spreadRadius: 10,
-                )
-              ]
+
+          // ── Big 3D Box ──
+          SizedBox(
+            width: 160,
+            height: 160,
+            child: BoxAnimationWidget(
+              boxState: BoxState.open,
+              size: 160,
             ),
-            child: const Icon(Icons.all_inbox, size: 64, color: AppColors.accent),
           ),
-          
-          const SizedBox(height: AppSpacing.sp8),
+
+          const SizedBox(height: AppSpacing.sp6),
 
           // Inputs with Drop Animation
           AnimatedBuilder(
