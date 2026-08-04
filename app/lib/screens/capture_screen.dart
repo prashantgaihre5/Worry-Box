@@ -21,6 +21,7 @@ class CaptureScreen extends StatefulWidget {
   final String locale;
   final VoidCallback onWorryAdded;
   final VoidCallback onToggleLocale;
+  final VoidCallback onToggleDevMode;
 
   const CaptureScreen({
     super.key,
@@ -29,6 +30,7 @@ class CaptureScreen extends StatefulWidget {
     required this.locale,
     required this.onWorryAdded,
     required this.onToggleLocale,
+    required this.onToggleDevMode,
   });
 
   @override
@@ -102,11 +104,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
           const SizedBox(height: AppSpacing.sp6),
 
-          // ── Title ──
-          Text(
-            AppStrings.get('appTitle', locale: _locale),
-            style: Theme.of(context).textTheme.headlineLarge,
-            textAlign: TextAlign.center,
+          // ── Title (long-press to toggle dev mode) ──
+          GestureDetector(
+            onLongPress: widget.onToggleDevMode,
+            child: Text(
+              AppStrings.get('appTitle', locale: _locale),
+              style: Theme.of(context).textTheme.headlineLarge,
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: AppSpacing.sp2),
           Text(

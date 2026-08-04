@@ -16,6 +16,11 @@ class ConsolationMessages {
     "Breathe. It can wait.",
     "You don't have to solve it now.",
     "It's noted. Now it can rest.",
+    "You're doing the right thing.",
+    "Let your mind take a break.",
+    "That thought is safe with us.",
+    "Give yourself permission to pause.",
+    "You've acknowledged it. That's enough for now.",
   ];
 
   static const List<String> _messagesNe = [
@@ -29,6 +34,11 @@ class ConsolationMessages {
     "सास फेर्नुहोस्। यो पर्खन सक्छ।",
     "अहिले समाधान गर्नुपर्दैन।",
     "नोट गरिएको छ। अब यसलाई आराम दिनुहोस्।",
+    "तपाईं सही काम गर्दै हुनुहुन्छ।",
+    "आफ्नो मनलाई आराम दिनुहोस्।",
+    "त्यो विचार हामीसँग सुरक्षित छ।",
+    "आफूलाई रोक्ने अनुमति दिनुहोस्।",
+    "तपाईंले स्वीकार गर्नुभयो। अहिलेको लागि त्यति पुग्छ।",
   ];
 
   static final _random = Random();
@@ -37,5 +47,16 @@ class ConsolationMessages {
   static String getRandom({String locale = 'en'}) {
     final messages = locale == 'ne' ? _messagesNe : _messagesEn;
     return messages[_random.nextInt(messages.length)];
+  }
+
+  /// Returns a specific consolation message by index (for testing).
+  static String getByIndex(int index, {String locale = 'en'}) {
+    final messages = locale == 'ne' ? _messagesNe : _messagesEn;
+    return messages[index % messages.length];
+  }
+
+  /// Returns the total count of messages for a locale.
+  static int count({String locale = 'en'}) {
+    return locale == 'ne' ? _messagesNe.length : _messagesEn.length;
   }
 }

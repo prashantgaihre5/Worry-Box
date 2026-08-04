@@ -25,7 +25,7 @@ class WorryBoxApp extends StatefulWidget {
   State<WorryBoxApp> createState() => _WorryBoxAppState();
 }
 
-class _WorryBoxAppState extends State<WorryBoxApp> {
+class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
   final AudioService _audio = AudioService();
   late ViewState _currentView;
   late String _locale;
@@ -34,21 +34,43 @@ class _WorryBoxAppState extends State<WorryBoxApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _locale = widget.storage.state.settings.locale;
     _currentView = deriveViewState(widget.storage);
+
+    // Listen to storage changes and re-derive view state.
+    widget.storage.addListener(_onStorageChanged);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    widget.storage.removeListener(_onStorageChanged);
     _audio.dispose();
     super.dispose();
   }
 
+  /// Re-derive view state when the app returns from background.
+  /// Handles the case where unlock time passed while the app was suspended.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshView();
+    }
+  }
+
+  void _onStorageChanged() {
+    _refreshView();
+  }
+
   void _refreshView() {
-    setState(() {
-      _currentView = deriveViewState(widget.storage);
-      _showConsolation = false;
-    });
+    final newView = deriveViewState(widget.storage);
+    if (newView != _currentView || _showConsolation) {
+      setState(() {
+        _currentView = newView;
+        _showConsolation = false;
+      });
+    }
   }
 
   void _onWorryAdded() {
@@ -65,6 +87,28 @@ class _WorryBoxAppState extends State<WorryBoxApp> {
     widget.storage.setLocale(_locale);
   }
 
+  /// Dev mode: long-press the title to toggle 10-second unlock.
+  void _toggleDevMode() {
+    if (widget.storage.isDevMode) {
+      widget.storage.disableDevMode();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Dev mode disabled'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    } else {
+      widget.storage.enableDevMode(10);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Dev mode enabled — worries unlock in 10 seconds'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -72,19 +116,60 @@ class _WorryBoxAppState extends State<WorryBoxApp> {
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       home: Scaffold(
-        body: Container(
-          // Animated gradient background
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.bg0, AppColors.bg1, AppColors.bg0],
-              stops: [0.0, 0.5, 1.0],
+        body: Stack(
+          children: [
+            // ── Animated gradient background ──
+            const _AnimatedBackground(),
+
+            // ── Main content ──
+            SafeArea(
+              child: _buildCurrentView(),
             ),
-          ),
-          child: SafeArea(
-            child: _buildCurrentView(),
-          ),
+
+            // ── Dev mode badge ──
+            if (widget.storage.isDevMode)
+              Positioned(
+                top: 48,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'dev mode',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+
+            // ── Storage unavailable warning ──
+            if (!widget.storage.isAvailable)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  color: AppColors.error.withValues(alpha: 0.9),
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    _locale == 'ne'
+                        ? 'यो एप बन्द गरेपछि तपाईंका चिन्ताहरू सुरक्षित हुनेछैनन्।'
+                        : "Your worries won't be saved after you close this app.",
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -99,6 +184,7 @@ class _WorryBoxAppState extends State<WorryBoxApp> {
           locale: _locale,
           onWorryAdded: _onWorryAdded,
           onToggleLocale: _toggleLocale,
+          onToggleDevMode: _toggleDevMode,
         );
       case ViewState.locked:
         return LockedScreen(
@@ -114,5 +200,63 @@ class _WorryBoxAppState extends State<WorryBoxApp> {
           onAllCleared: _refreshView,
         );
     }
+  }
+}
+
+/// Slow-breathing animated gradient background.
+class _AnimatedBackground extends StatefulWidget {
+  const _AnimatedBackground();
+
+  @override
+  State<_AnimatedBackground> createState() => _AnimatedBackgroundState();
+}
+
+class _AnimatedBackgroundState extends State<_AnimatedBackground>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment(
+                0.5 + _controller.value * 0.5,
+                1.0 - _controller.value * 0.3,
+              ),
+              colors: const [
+                AppColors.bg0,
+                AppColors.bg1,
+                AppColors.bg0,
+              ],
+              stops: [
+                0.0,
+                0.3 + _controller.value * 0.4,
+                1.0,
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }

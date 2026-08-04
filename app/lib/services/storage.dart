@@ -1,13 +1,16 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/app_state.dart';
 import '../models/worry.dart';
 
 /// The ONLY module that touches SharedPreferences.
 ///
+/// Extends ChangeNotifier so screens can listen for state changes
+/// and automatically rebuild when worries are added/removed.
+///
 /// Implements the Storage API from SPEC.md §5.
-/// All other code accesses persistence through this service.
-class StorageService {
+class StorageService extends ChangeNotifier {
   static const String _key = 'worryBox_v1';
   static const String _corruptPrefix = 'worryBox_v1_corrupt_';
 
@@ -18,6 +21,10 @@ class StorageService {
   bool _isAvailable = false;
   bool get isAvailable => _isAvailable;
 
+  /// Dev mode: override unlock duration in seconds.
+  int? _devUnlockSeconds;
+  bool get isDevMode => _devUnlockSeconds != null;
+
   /// The current in-memory state.
   AppState get state => _state;
 
@@ -26,17 +33,32 @@ class StorageService {
     try {
       _prefs = await SharedPreferences.getInstance();
       _isAvailable = true;
-      _state = loadState();
+      _state = _loadState();
     } catch (_) {
-      // SharedPreferences unavailable — app runs in memory only.
       _isAvailable = false;
       _state = AppState.defaults();
     }
   }
 
+  /// Enable dev mode with a short unlock time for testing.
+  void enableDevMode(int seconds) {
+    _devUnlockSeconds = seconds;
+    notifyListeners();
+  }
+
+  /// Disable dev mode.
+  void disableDevMode() {
+    _devUnlockSeconds = null;
+    notifyListeners();
+  }
+
+  // ────────────────────────────────
+  // State persistence
+  // ────────────────────────────────
+
   /// Always returns a valid AppState. Never throws.
   /// Handles corruption per SPEC.md §4.
-  AppState loadState() {
+  AppState _loadState() {
     if (!_isAvailable || _prefs == null) return AppState.defaults();
 
     try {
@@ -45,14 +67,12 @@ class StorageService {
 
       final json = jsonDecode(raw);
       if (json is! Map<String, dynamic>) {
-        // Corrupt — back it up and return fresh state.
         _backupCorrupt(raw);
         return AppState.defaults();
       }
 
       final parsed = AppState.fromJson(json);
 
-      // If fromJson returned defaults due to schema mismatch, back up the raw.
       if (json.containsKey('schemaVersion') &&
           json['schemaVersion'] != AppState.currentSchemaVersion) {
         _backupCorrupt(raw);
@@ -60,7 +80,6 @@ class StorageService {
 
       return parsed;
     } catch (_) {
-      // Unparseable — back up and return defaults.
       final raw = _prefs!.getString(_key);
       if (raw != null) _backupCorrupt(raw);
       return AppState.defaults();
@@ -68,8 +87,7 @@ class StorageService {
   }
 
   /// Persists the current state. Returns false on failure.
-  Future<bool> saveState([AppState? newState]) async {
-    if (newState != null) _state = newState;
+  Future<bool> _saveState() async {
     if (!_isAvailable || _prefs == null) return false;
 
     try {
@@ -86,11 +104,11 @@ class StorageService {
 
   /// Creates, persists, and returns a new Worry.
   /// Throws ArgumentError on invalid input.
-  Future<Worry> addWorry(String text, {int? devUnlockSeconds}) async {
+  Future<Worry> addWorry(String text) async {
     final Worry worry;
 
-    if (devUnlockSeconds != null) {
-      worry = Worry.createDev(text: text, unlockSeconds: devUnlockSeconds);
+    if (_devUnlockSeconds != null) {
+      worry = Worry.createDev(text: text, unlockSeconds: _devUnlockSeconds!);
     } else {
       worry = Worry.create(
         text: text,
@@ -99,8 +117,9 @@ class StorageService {
       );
     }
 
-    _state.worries.insert(0, worry); // newest first
-    await saveState();
+    _state.worries.insert(0, worry);
+    await _saveState();
+    notifyListeners();
     return worry;
   }
 
@@ -134,48 +153,49 @@ class StorageService {
   int? nextUnlockAt() {
     final pending = getPendingWorries();
     if (pending.isEmpty) return null;
-    return pending
-        .map((w) => w.unlockAt)
-        .reduce((a, b) => a < b ? a : b);
+    return pending.map((w) => w.unlockAt).reduce((a, b) => a < b ? a : b);
   }
 
   /// Deletes the worry from the list entirely.
   Future<void> releaseWorry(String id) async {
     _state.worries.removeWhere((w) => w.id == id);
-    await saveState();
+    await _saveState();
+    notifyListeners();
   }
 
   /// Archives the worry (status → "kept").
   Future<void> keepWorry(String id) async {
-    final worry = _state.worries.firstWhere(
-      (w) => w.id == id,
-      orElse: () => throw ArgumentError('Worry not found: $id'),
-    );
-    worry.status = 'kept';
-    await saveState();
+    final idx = _state.worries.indexWhere((w) => w.id == id);
+    if (idx == -1) return;
+    _state.worries[idx].status = 'kept';
+    await _saveState();
+    notifyListeners();
   }
 
   /// Marks a worry as revealed.
   Future<void> markRevealed(String id) async {
-    final worry = _state.worries.firstWhere(
-      (w) => w.id == id,
-      orElse: () => throw ArgumentError('Worry not found: $id'),
-    );
-    worry.status = 'revealed';
-    await saveState();
+    final idx = _state.worries.indexWhere((w) => w.id == id);
+    if (idx == -1) return;
+    _state.worries[idx].status = 'revealed';
+    await _saveState();
+    notifyListeners();
   }
 
   /// Updates the unlock time for FUTURE worries only.
   Future<void> setUnlockTime(int hour, int minute) async {
     if (hour < 0 || hour > 23) throw RangeError.range(hour, 0, 23, 'hour');
-    if (minute < 0 || minute > 59) throw RangeError.range(minute, 0, 59, 'minute');
+    if (minute < 0 || minute > 59) {
+      throw RangeError.range(minute, 0, 59, 'minute');
+    }
 
     _state = AppState(
       schemaVersion: _state.schemaVersion,
-      settings: _state.settings.copyWith(unlockHour: hour, unlockMinute: minute),
+      settings:
+          _state.settings.copyWith(unlockHour: hour, unlockMinute: minute),
       worries: _state.worries,
     );
-    await saveState();
+    await _saveState();
+    notifyListeners();
   }
 
   /// Updates the locale preference.
@@ -185,7 +205,8 @@ class StorageService {
       settings: _state.settings.copyWith(locale: locale),
       worries: _state.worries,
     );
-    await saveState();
+    await _saveState();
+    notifyListeners();
   }
 
   /// Returns pretty-printed JSON of the full state, for manual backup.
@@ -194,14 +215,20 @@ class StorageService {
     return encoder.convert(_state.toJson());
   }
 
+  /// Force re-reads state from disk. Useful for multi-instance sync.
+  Future<void> reload() async {
+    _state = _loadState();
+    notifyListeners();
+  }
+
   // ────────────────────────────────
   // Internal helpers
   // ────────────────────────────────
 
-  /// Backs up corrupt data under a timestamped key.
   void _backupCorrupt(String rawValue) {
     if (_prefs == null) return;
-    final backupKey = '$_corruptPrefix${DateTime.now().millisecondsSinceEpoch}';
+    final backupKey =
+        '$_corruptPrefix${DateTime.now().millisecondsSinceEpoch}';
     _prefs!.setString(backupKey, rawValue);
   }
 }
