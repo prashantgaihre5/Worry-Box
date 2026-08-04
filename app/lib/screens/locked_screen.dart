@@ -7,7 +7,11 @@ import '../services/audio_service.dart';
 import '../theme.dart';
 import '../widgets/box_animation.dart';
 import '../widgets/particle_burst.dart';
+<<<<<<< HEAD
 import '../widgets/glass_card.dart';
+=======
+import '../widgets/stress_graph.dart';
+>>>>>>> 75db49e (feat: real-time Stress Analytics graph tracking let go and important worries)
 import 'dart:ui'; // for FontFeature
 
 class LockedScreen extends StatefulWidget {
@@ -128,24 +132,10 @@ class _LockedScreenState extends State<LockedScreen> {
           if (widget.storage.state.totalWorriesCreated > 0)
             Padding(
               padding: const EdgeInsets.fromLTRB(AppSpacing.sp4, AppSpacing.sp4, AppSpacing.sp4, 0),
-              child: GlassCard(
-                padding: const EdgeInsets.all(AppSpacing.sp3),
-                child: Row(
-                  children: [
-                    const Icon(Icons.insights_rounded, color: AppColors.accentSoft, size: 20),
-                    const SizedBox(width: AppSpacing.sp3),
-                    Expanded(
-                      child: Text(
-                        '${((widget.storage.state.totalWorriesReleased / widget.storage.state.totalWorriesCreated) * 100).toInt()}% of your worries were let go. You are doing great!',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.text,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              child: StressGraph(
+                totalCreated: widget.storage.state.totalWorriesCreated,
+                totalReleased: widget.storage.state.totalWorriesReleased,
+                totalImportant: widget.storage.state.totalWorriesMarkedImportant,
               ),
             ),
 

@@ -124,6 +124,7 @@ class StorageService extends ChangeNotifier {
       worries: _state.worries,
       totalWorriesCreated: _state.totalWorriesCreated + 1,
       totalWorriesReleased: _state.totalWorriesReleased,
+      totalWorriesMarkedImportant: _state.totalWorriesMarkedImportant,
     );
     await _saveState();
     notifyListeners();
@@ -148,6 +149,7 @@ class StorageService extends ChangeNotifier {
       worries: _state.worries,
       totalWorriesCreated: _state.totalWorriesCreated + 1,
       totalWorriesReleased: _state.totalWorriesReleased,
+      totalWorriesMarkedImportant: _state.totalWorriesMarkedImportant,
     );
     await _saveState();
     notifyListeners();
@@ -205,6 +207,7 @@ class StorageService extends ChangeNotifier {
         worries: _state.worries,
         totalWorriesCreated: _state.totalWorriesCreated,
         totalWorriesReleased: _state.totalWorriesReleased + 1,
+        totalWorriesMarkedImportant: _state.totalWorriesMarkedImportant,
       );
       await _saveState();
       notifyListeners();
@@ -233,16 +236,34 @@ class StorageService extends ChangeNotifier {
   Future<void> markImportant(String id) async {
     final idx = _state.worries.indexWhere((w) => w.id == id);
     if (idx == -1) return;
-    _state.worries[idx].isImportant = true;
-    await _saveState();
-    notifyListeners();
+    if (!_state.worries[idx].isImportant) {
+      _state.worries[idx].isImportant = true;
+      _state = AppState(
+        schemaVersion: _state.schemaVersion,
+        settings: _state.settings,
+        worries: _state.worries,
+        totalWorriesCreated: _state.totalWorriesCreated,
+        totalWorriesReleased: _state.totalWorriesReleased,
+        totalWorriesMarkedImportant: _state.totalWorriesMarkedImportant + 1,
+      );
+      await _saveState();
+      notifyListeners();
+    }
   }
 
   /// Finds worry by id, sets isImportant = false, saves state, notifies listeners.
   Future<void> unmarkImportant(String id) async {
     final idx = _state.worries.indexWhere((w) => w.id == id);
-    if (idx != -1) {
+    if (idx != -1 && _state.worries[idx].isImportant) {
       _state.worries[idx].isImportant = false;
+      _state = AppState(
+        schemaVersion: _state.schemaVersion,
+        settings: _state.settings,
+        worries: _state.worries,
+        totalWorriesCreated: _state.totalWorriesCreated,
+        totalWorriesReleased: _state.totalWorriesReleased,
+        totalWorriesMarkedImportant: _state.totalWorriesMarkedImportant - 1,
+      );
       await _saveState();
       notifyListeners();
     }

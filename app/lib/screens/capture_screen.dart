@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
 import '../services/storage.dart';
 import '../services/audio_service.dart';
+import '../widgets/stress_graph.dart';
 import '../theme.dart';
 import '../widgets/glass_card.dart';
 

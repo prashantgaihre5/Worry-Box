@@ -14,6 +14,7 @@ class AppState {
   final List<Worry> worries;
   final int totalWorriesCreated;
   final int totalWorriesReleased;
+  final int totalWorriesMarkedImportant;
 
   AppState({
     this.schemaVersion = currentSchemaVersion,
@@ -21,6 +22,7 @@ class AppState {
     List<Worry>? worries,
     this.totalWorriesCreated = 0,
     this.totalWorriesReleased = 0,
+    this.totalWorriesMarkedImportant = 0,
   })  : settings = settings ?? AppSettings(),
         worries = worries ?? [];
 
@@ -50,6 +52,7 @@ class AppState {
             [],
         totalWorriesCreated: json['totalWorriesCreated'] as int? ?? 0,
         totalWorriesReleased: json['totalWorriesReleased'] as int? ?? 0,
+        totalWorriesMarkedImportant: json['totalWorriesMarkedImportant'] as int? ?? 0,
       );
     } catch (_) {
       return AppState.defaults();
@@ -64,6 +67,7 @@ class AppState {
       'worries': worries.map((w) => w.toJson()).toList(),
       'totalWorriesCreated': totalWorriesCreated,
       'totalWorriesReleased': totalWorriesReleased,
+      'totalWorriesMarkedImportant': totalWorriesMarkedImportant,
     };
   }
 }
