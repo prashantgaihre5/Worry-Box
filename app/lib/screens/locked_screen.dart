@@ -532,73 +532,72 @@ class _WorryCardState extends State<_WorryCard> {
                         color: AppColors.bg0.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(AppShape.radiusSm),
                       ),
-                      child: Text(
-                        widget.worry.text,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.text,
-                          height: 1.4,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.worry.text,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.text,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sp3),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                widget.worry.relativeTime,
+                                style: const TextStyle(
+                                    fontSize: 11, color: AppColors.textMuted),
+                              ),
+                              Row(
+                                children: [
+                                  TextButton.icon(
+                                    onPressed: widget.onToggleImportant,
+                                    icon: Icon(
+                                      isImportant ? Icons.flag_rounded : Icons.flag_outlined,
+                                      size: 16,
+                                      color: isImportant
+                                          ? AppColors.accent
+                                          : AppColors.textMuted,
+                                    ),
+                                    label: Text(
+                                      isImportant ? 'Important' : 'Mark',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isImportant
+                                            ? AppColors.accent
+                                            : AppColors.textMuted,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sp1),
+                                  TextButton.icon(
+                                    onPressed: widget.onRemove,
+                                    icon: const Icon(Icons.close_rounded,
+                                        size: 16, color: AppColors.error),
+                                    label: const Text(
+                                      'Remove',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.error,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   )
                 : const SizedBox.shrink(),
           ),
-
-          if (isUnlocked) ...[
-            const SizedBox(height: AppSpacing.sp2),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: AppSpacing.sp1),
-                  child: Text(
-                    widget.worry.relativeTime,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppColors.textMuted),
-                  ),
-                ),
-                Row(
-                  children: [
-                    TextButton.icon(
-                      onPressed: widget.onToggleImportant,
-                      icon: Icon(
-                        isImportant ? Icons.flag_rounded : Icons.flag_outlined,
-                        size: 16,
-                        color: isImportant
-                            ? AppColors.accent
-                            : AppColors.textMuted,
-                      ),
-                      label: Text(
-                        isImportant ? 'Important' : 'Mark',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isImportant
-                              ? AppColors.accent
-                              : AppColors.textMuted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sp1),
-                    TextButton.icon(
-                      onPressed: widget.onRemove,
-                      icon: const Icon(Icons.close_rounded,
-                          size: 16, color: AppColors.error),
-                      label: const Text(
-                        'Remove',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
         ],
       ),
     );
