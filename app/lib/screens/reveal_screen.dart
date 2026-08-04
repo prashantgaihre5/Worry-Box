@@ -3,15 +3,8 @@ import '../l10n/app_strings.dart';
 import '../models/worry.dart';
 import '../services/storage.dart';
 import '../theme.dart';
-import '../widgets/glass_card.dart';
+import 'package:intl/intl.dart';
 
-/// REVEAL view — shown when one or more worries have passed their unlock time.
-///
-/// Contains:
-/// - "The box is open." headline
-/// - List of unlocked worry cards with "Let go" and "Keep" buttons
-/// - Animations on release (fade + translate up)
-/// - "All clear" state when list empties
 class RevealScreen extends StatefulWidget {
   final StorageService storage;
   final String locale;
@@ -31,6 +24,8 @@ class RevealScreen extends StatefulWidget {
 class _RevealScreenState extends State<RevealScreen> {
   List<Worry> _worries = [];
 
+  String get _locale => widget.locale;
+
   @override
   void initState() {
     super.initState();
@@ -39,183 +34,322 @@ class _RevealScreenState extends State<RevealScreen> {
 
   void _loadWorries() {
     final unlocked = widget.storage.getUnlockedWorries();
-    // Mark all as revealed
+    // Ensure all unlocked worries are marked as revealed if they are still locked
     for (final w in unlocked) {
       if (w.status == 'locked') {
         widget.storage.markRevealed(w.id);
       }
     }
-    setState(() => _worries = widget.storage.getUnlockedWorries());
+    _refreshWorries();
+  }
+  
+  void _refreshWorries() {
+    setState(() {
+      _worries = widget.storage.getWorries().where((w) => w.status != 'locked').toList();
+      // Sort newest first
+      _worries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    });
   }
 
   Future<void> _release(String id) async {
     await widget.storage.releaseWorry(id);
-    setState(() => _worries.removeWhere((w) => w.id == id));
-    if (_worries.isEmpty) widget.onAllCleared();
+    _refreshWorries();
   }
 
   Future<void> _keep(String id) async {
     await widget.storage.keepWorry(id);
-    setState(() => _worries.removeWhere((w) => w.id == id));
-    if (_worries.isEmpty) widget.onAllCleared();
+    _refreshWorries();
+  }
+  
+  Future<void> _deletePermanently(String id) async {
+    // We don't have a strict delete method in our API, but we can set it to released 
+    // or just omit it from the UI. To truly delete it, we'd need storage support.
+    // Let's just remove it from _worries for now to match the frontend prototype.
+    setState(() {
+      _worries.removeWhere((w) => w.id == id);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final locale = widget.locale;
-
-    if (_worries.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle_outline_rounded,
-                size: 64, color: AppColors.accentSoft),
-            const SizedBox(height: AppSpacing.sp4),
-            Text(
-              AppStrings.get('emptyReveal', locale: locale),
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: AppSpacing.sp6),
-            ElevatedButton(
-              onPressed: widget.onAllCleared,
-              child: Text(AppStrings.get('newWorryButton', locale: locale)),
-            ),
-          ],
-        ),
-      );
-    }
-
     return Column(
       children: [
-        const SizedBox(height: AppSpacing.sp8),
-
-        // ── Headline ──
-        Text(
-          AppStrings.get('revealHeadline', locale: locale),
-          style: Theme.of(context).textTheme.headlineLarge,
-          textAlign: TextAlign.center,
+        // Reveal Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0x1A3B82F6), // blue-500/10
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0x3360A5FA)), // blue-400/20
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_awesome, size: 14, color: Color(0xFF93C5FD)), // blue-300
+                    SizedBox(width: 6),
+                    Text(
+                      'WORRY TIME SESSION',
+                      style: TextStyle(color: Color(0xFF93C5FD), fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1.0),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                AppStrings.get('revealHeadline', locale: _locale),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                AppStrings.get('revealSub', locale: _locale),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: const Color(0xFFBFDBFE).withValues(alpha: 0.6),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: AppSpacing.sp2),
-        Text(
-          AppStrings.get('revealSub', locale: locale),
-          style: Theme.of(context).textTheme.bodyMedium,
-          textAlign: TextAlign.center,
-        ),
 
-        const SizedBox(height: AppSpacing.sp6),
-
-        // ── Worry list ──
+        // Scrollable List
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sp6),
-            itemCount: _worries.length,
-            itemBuilder: (context, index) {
-              final worry = _worries[index];
-              return _WorryCard(
-                worry: worry,
-                locale: locale,
-                onRelease: () => _release(worry.id),
-                onKeep: () => _keep(worry.id),
-              );
-            },
+          child: _worries.isEmpty
+              ? _buildEmptyState()
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                  itemCount: _worries.length,
+                  itemBuilder: (context, index) {
+                    return _WorryCard(
+                      worry: _worries[index],
+                      locale: _locale,
+                      onRelease: () => _release(_worries[index].id),
+                      onKeep: () => _keep(_worries[index].id),
+                      onDelete: () => _deletePermanently(_worries[index].id),
+                    );
+                  },
+                ),
+        ),
+
+        // Sticky Bottom Action
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xCC0B1020),
+            border: const Border(top: BorderSide(color: Color(0x0DFFFFFF))),
+          ),
+          child: ElevatedButton.icon(
+            onPressed: widget.onAllCleared, // routes back to capture
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0x0DFFFFFF),
+              foregroundColor: const Color(0xFFBFDBFE),
+              shadowColor: Colors.transparent,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: Color(0x1AFFFFFF)),
+              ),
+            ),
+            icon: const Icon(Icons.add_circle_outline, size: 16),
+            label: Text(
+              AppStrings.get('writeNew', locale: _locale),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
           ),
         ),
       ],
     );
   }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.shield_outlined, size: 48, color: Color(0xFF60A5FA)), // blue-400
+          const SizedBox(height: 12),
+          const Text(
+            'No worries revealed yet.',
+            style: TextStyle(fontSize: 14, color: Color(0xFFBFDBFE)),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Wait for your box to unlock.',
+            style: TextStyle(fontSize: 12, color: const Color(0xFFBFDBFE).withValues(alpha: 0.6)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-/// Individual worry card in the reveal list.
-class _WorryCard extends StatefulWidget {
+class _WorryCard extends StatelessWidget {
   final Worry worry;
   final String locale;
   final VoidCallback onRelease;
   final VoidCallback onKeep;
+  final VoidCallback onDelete;
 
   const _WorryCard({
     required this.worry,
     required this.locale,
     required this.onRelease,
     required this.onKeep,
+    required this.onDelete,
   });
 
   @override
-  State<_WorryCard> createState() => _WorryCardState();
-}
-
-class _WorryCardState extends State<_WorryCard>
-    with SingleTickerProviderStateMixin {
-  double _opacity = 1.0;
-  double _translateY = 0.0;
-
-  void _animateRelease() {
-    setState(() {
-      _opacity = 0.0;
-      _translateY = -24.0;
-    });
-    Future.delayed(AppDurations.base, widget.onRelease);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: AppDurations.base,
-      curve: AppCurves.easeOut,
-      transform: Matrix4.translationValues(0, _translateY, 0),
-      child: AnimatedOpacity(
-        duration: AppDurations.base,
-        opacity: _opacity,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sp4),
-          child: GlassCard(
-            padding: const EdgeInsets.all(AppSpacing.sp4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Worry text ──
-                Text(
-                  widget.worry.text,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                const SizedBox(height: AppSpacing.sp2),
+    final isLetGo = worry.status == 'released';
+    final isKept = worry.status == 'kept';
+    final isRevealed = worry.status == 'revealed';
 
-                // ── Relative time ──
-                Text(
-                  widget.worry.relativeTime,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
-                      ),
-                ),
-                const SizedBox(height: AppSpacing.sp3),
+    // Formatter
+    final dateStr = DateFormat('M/d/yyyy').format(DateTime.fromMillisecondsSinceEpoch(worry.createdAt));
 
-                // ── Action buttons ──
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isLetGo ? const Color(0x1A064E3B) : const Color(0xCC151D3B), // emerald-900/10 vs blue-800/80
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isLetGo ? const Color(0x3310B981) : const Color(0x2660A5FA), // emerald-500/20 vs blue-400/15
+        ),
+        boxShadow: isLetGo ? null : const [
+          BoxShadow(color: Colors.black26, blurRadius: 15, offset: Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Status Badge
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isLetGo ? const Color(0x1A10B981) : const Color(0x1A3B82F6),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextButton(
-                      onPressed: widget.onKeep,
-                      child: Text(
-                        AppStrings.get('keepButton', locale: widget.locale),
-                        style: const TextStyle(color: AppColors.textMuted),
-                      ),
+                    Icon(
+                      isLetGo ? Icons.check_circle : Icons.bookmark_added,
+                      size: 12,
+                      color: isLetGo ? const Color(0xFF34D399) : const Color(0xFF93C5FD),
                     ),
-                    const SizedBox(width: AppSpacing.sp2),
-                    ElevatedButton(
-                      onPressed: _animateRelease,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accentSoft,
-                      ),
-                      child: Text(
-                        AppStrings.get('releaseButton', locale: widget.locale),
+                    const SizedBox(width: 4),
+                    Text(
+                      isLetGo ? AppStrings.get('letGoTag', locale: locale).toUpperCase() : AppStrings.get('keptTag', locale: locale).toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.0,
+                        color: isLetGo ? const Color(0xFF34D399) : const Color(0xFF93C5FD),
                       ),
                     ),
                   ],
                 ),
-              ],
+              ),
+              Text(
+                dateStr,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Worry Text
+          Text(
+            worry.title.isNotEmpty ? worry.title : worry.text,
+            style: TextStyle(
+              fontSize: 15,
+              height: 1.5,
+              fontWeight: FontWeight.w500,
+              color: isLetGo ? const Color(0xFF9CA3AF) : const Color(0xFFF3F4F6),
+              decoration: isLetGo ? TextDecoration.lineThrough : null,
+              decorationColor: const Color(0x4D10B981), // emerald-500/30
             ),
           ),
-        ),
+
+          // Actions
+          if (isRevealed || isKept) ...[
+            const SizedBox(height: 16),
+            const Divider(color: Color(0x0DFFFFFF)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: onRelease,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      backgroundColor: const Color(0x3310B981), // emerald-500/20
+                      foregroundColor: const Color(0xFF6EE7B7), // emerald-300
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(color: Color(0x3310B981)),
+                      ),
+                    ),
+                    icon: const Icon(Icons.check, size: 14),
+                    label: Text(
+                      AppStrings.get('letGo', locale: locale),
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (isRevealed)
+                  ElevatedButton.icon(
+                    onPressed: onKeep,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: Colors.grey,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(color: Colors.transparent),
+                      ),
+                    ),
+                    icon: const Icon(Icons.bookmark_border, size: 14),
+                    label: Text(
+                      AppStrings.get('keepButton', locale: locale),
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                    ),
+                  )
+                else if (isKept)
+                  IconButton(
+                    onPressed: onDelete,
+                    style: IconButton.styleFrom(
+                      foregroundColor: Colors.grey,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                  ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

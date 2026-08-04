@@ -4,23 +4,29 @@ import 'package:flutter/material.dart';
 /// All colors, text styles, and shapes are defined here.
 class AppColors {
   static const bg0 = Color(0xFF0B1020);
-  static const bg1 = Color(0xFF151D3B);
+  static const bg1 = Color(0xFF101730);
+  static const bg2 = Color(0xFF151D3B);
   
-  static const surface = Color(0x0FFFFFFF); // 6% white
-  static const surfaceStrong = Color(0x1AFFFFFF); // 10% white
-  static const border = Color(0x26FFFFFF); // 15% white
-  static const borderHighlight = Color(0x40FFFFFF); // Specular highlight
+  static const glassPanelBg = Color(0x73151D3B); // rgba(21, 29, 59, 0.45)
+  static const glassPanelBorder = Color(0x1EFFFFFF); // rgba(255, 255, 255, 0.12)
+  static const glassInputBg = Color(0x800B1020); // rgba(11, 16, 32, 0.5)
+  static const glassInputBorder = Color(0x1AFFFFFF); // rgba(255, 255, 255, 0.1)
+  
+  static const surface = Color(0x1AFFFFFF); // 10% white for glass
+  static const surfaceStrong = Color(0x33FFFFFF); // 20% white
+  static const border = Color(0x1EFFFFFF); // 12% white
+  static const borderHighlight = Color(0x38FFFFFF); // 22% white
 
-  // Vibrant Orbs (for backdrop/particles)
-  static const orb1 = Color(0xFF7B61FF); // Vibrant purple
-  static const orb2 = Color(0xFF45B0E5); // Bright cyan
-  static const orb3 = Color(0xFFFF5288); // Hot pink
+  // Glowing Orbs
+  static const orb1 = Color(0xFF2563EB); // Blue 600
+  static const orb2 = Color(0xFF6366F1); // Indigo 500
+  static const orb3 = Color(0xFF38BDF8); // Sky 400
 
-  static const text = Color(0xFFEAEEF7);
-  static const textMuted = Color(0xFF97A3C4);
-  static const accent = Color(0xFF7C9CF5);
-  static const accentSoft = Color(0xFF8FD9C2);
-  static const error = Color(0xFFF77272);
+  static const text = Color(0xFFF3F4F6); // Gray 100
+  static const textMuted = Color(0xFF9CA3AF); // Gray 400
+  static const accent = Color(0xFF60A5FA); // Blue 400
+  static const accentSoft = Color(0xFF93C5FD); // Blue 300
+  static const error = Color(0xFFF87171); // Red 400
 }
 
 /// Spacing scale (4px base).

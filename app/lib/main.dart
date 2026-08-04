@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'theme.dart';
 import 'services/storage.dart';
@@ -8,6 +6,7 @@ import 'services/state.dart';
 import 'screens/capture_screen.dart';
 import 'screens/locked_screen.dart';
 import 'screens/reveal_screen.dart';
+import 'widgets/animated_background.dart';
 import 'l10n/app_strings.dart';
 
 void main() async {
@@ -131,116 +130,156 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       home: Scaffold(
-        appBar: AppBar(
-          title: GestureDetector(
-            onLongPress: _toggleDevMode,
-            child: Text(
-              AppStrings.get('appTitle', locale: _locale),
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.text,
-              ),
-            ),
-          ),
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          actions: [
-            TextButton(
-              onPressed: _toggleLocale,
-              child: Text(
-                AppStrings.get('languageToggle', locale: _locale),
-                style: const TextStyle(color: AppColors.accent),
-              ),
-            ),
-          ],
-        ),
         body: Stack(
           children: [
             // ── Animated gradient background ──
-            const _AnimatedBackground(),
+            const AnimatedBackground(),
 
             // ── Main content with AnimatedSwitcher transitions ──
             SafeArea(
-              child: Column(
-                children: [
-                  // Global Top Header
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 448), // max-w-md
+                  child: Column(
+                    children: [
+                      // Global Top Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Icon(Icons.inventory_2_outlined, color: AppColors.accent, size: 24),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Worry Box',
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18),
+                            // Logo
+                            Row(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.glassPanelBg,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: AppColors.glassPanelBorder),
+                                  ),
+                                  child: const Icon(Icons.layers, color: AppColors.accentSoft, size: 16),
+                                ),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  'Worry Box',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // Actions
+                            Row(
+                              children: [
+                                // Audio
+                                GestureDetector(
+                                  onTap: () async {
+                                    await _audio.toggle();
+                                    setState(() {});
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: _audio.isPlaying ? AppColors.accent.withValues(alpha: 0.25) : AppColors.glassPanelBg,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: _audio.isPlaying ? AppColors.accent.withValues(alpha: 0.5) : AppColors.glassPanelBorder,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      _audio.isPlaying ? Icons.volume_up : Icons.volume_off,
+                                      size: 16,
+                                      color: _audio.isPlaying ? AppColors.accentSoft : AppColors.textMuted,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Language
+                                GestureDetector(
+                                  onTap: _toggleLocale,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.glassPanelBg,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: AppColors.glassPanelBorder),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.language, size: 16, color: AppColors.accentSoft),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          _locale,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: AppColors.accentSoft,
+                                            letterSpacing: 1.0,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Info
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.glassPanelBg,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: AppColors.glassPanelBorder),
+                                  ),
+                                  child: const Icon(Icons.info_outline, size: 16, color: AppColors.textMuted),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                _audio.isPlaying ? Icons.music_note_rounded : Icons.music_off_rounded,
-                                color: AppColors.textMuted,
-                                size: 20,
-                              ),
-                              onPressed: () async {
-                                await _audio.toggle();
-                                setState(() {});
-                              },
-                            ),
-                            TextButton(
-                              onPressed: _toggleLocale,
-                              child: Text(
-                                _locale.toUpperCase(),
-                                style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
+                      ),
+                      
+                      // Segmented Control (Visual Indicator)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppColors.glassPanelBg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.glassPanelBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              _buildSegment('Capture', ViewState.capture, Icons.edit_outlined),
+                              _buildSegment('Locked', ViewState.locked, Icons.lock_outline),
+                              _buildSegment('Reveal', ViewState.reveal, Icons.auto_awesome),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                  // Segmented Control (Visual Indicator)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceStrong,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: AppColors.border),
                       ),
-                      child: Row(
-                        children: [
-                          _buildSegment('Capture', ViewState.capture, Icons.edit_outlined),
-                          _buildSegment('Locked', ViewState.locked, Icons.lock_outline),
-                          _buildSegment('Reveal', ViewState.reveal, Icons.lock_open_outlined),
-                        ],
+                      
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 500),
+                          switchInCurve: Curves.easeIn,
+                          switchOutCurve: Curves.easeOut,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(opacity: animation, child: child);
+                          },
+                          child: KeyedSubtree(
+                            key: ValueKey<ViewState>(_effectiveView),
+                            child: _buildCurrentView(),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 500),
-                      switchInCurve: Curves.easeIn,
-                      switchOutCurve: Curves.easeOut,
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(opacity: animation, child: child);
-                      },
-                      child: KeyedSubtree(
-                        key: ValueKey<ViewState>(_effectiveView),
-                        child: _buildCurrentView(),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
 
@@ -356,58 +395,3 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
   }
 }
 
-/// Slow-breathing animated gradient background.
-class _AnimatedBackground extends StatefulWidget {
-  const _AnimatedBackground();
-
-  @override
-  State<_AnimatedBackground> createState() => _AnimatedBackgroundState();
-}
-
-class _AnimatedBackgroundState extends State<_AnimatedBackground>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    // 15 seconds for a very slow, calming breath effect
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 15),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        // Evaluate the gradient stops based on the animation value
-        final val = _controller.value;
-        return Container(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment.center,
-              radius: 1.5,
-              colors: const [
-                AppColors.bg1,
-                AppColors.bg0,
-              ],
-              stops: [
-                0.3 + (val * 0.2), // pulses between 0.3 and 0.5
-                1.0,
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}

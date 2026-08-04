@@ -1,16 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../l10n/app_strings.dart';
 import '../models/worry.dart';
 import '../services/storage.dart';
 import '../services/audio_service.dart';
+import '../l10n/app_strings.dart';
 import '../theme.dart';
 import '../widgets/box_animation.dart';
-import '../widgets/particle_burst.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/stress_graph.dart';
-import 'package:intl/intl.dart';
-import 'dart:ui'; // for FontFeature
 
 class LockedScreen extends StatefulWidget {
   final StorageService storage;
@@ -32,20 +28,9 @@ class LockedScreen extends StatefulWidget {
 
 class _LockedScreenState extends State<LockedScreen> {
   Timer? _ticker;
-  final _titleController = TextEditingController();
-  final _descController = TextEditingController();
-  
-  static const List<_DurationOption> _durationOptions = [
-    _DurationOption('1m', 60),
-    _DurationOption('5m', 300),
-    _DurationOption('15m', 900),
-    _DurationOption('1h', 3600),
-    _DurationOption('3h', 10800),
-    _DurationOption('12h', 43200),
-    _DurationOption('1w', 604800),
-    _DurationOption('1M', 2592000),
-  ];
-  int _selectedDuration = 300;
+  final _quickInputController = TextEditingController();
+
+  String get _locale => widget.locale;
 
   @override
   void initState() {
@@ -58,25 +43,25 @@ class _LockedScreenState extends State<LockedScreen> {
   @override
   void dispose() {
     _ticker?.cancel();
-    _titleController.dispose();
-    _descController.dispose();
+    _quickInputController.dispose();
     super.dispose();
   }
 
-  Future<void> _submitWorry() async {
-    final title = _titleController.text.trim();
-    final desc = _descController.text.trim();
-    if (title.isEmpty) return;
+  Future<void> _quickAdd() async {
+    final text = _quickInputController.text.trim();
+    if (text.isEmpty) return;
 
     try {
-      await widget.storage.addWorryWithDuration(
-        title: title,
-        description: desc,
-        durationSeconds: _selectedDuration,
-      );
-      _titleController.clear();
-      _descController.clear();
+      await widget.storage.addWorry(text);
+      _quickInputController.clear();
       FocusScope.of(context).unfocus();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Added to your locked Worry Box')),
+        );
+        setState(() {});
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -86,544 +71,235 @@ class _LockedScreenState extends State<LockedScreen> {
     }
   }
 
-  Future<void> _toggleImportant(Worry worry) async {
-    if (worry.isImportant) {
-      await widget.storage.unmarkImportant(worry.id);
-    } else {
-      await widget.storage.markImportant(worry.id);
-    }
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _removeWorry(String id) async {
-    await widget.storage.releaseWorry(id);
-    if (mounted) setState(() {});
-    
-    // Check if we need to return to capture screen
-    if (widget.storage.getWorries().where((w) => w.status != 'released').isEmpty) {
-      widget.onStateChange();
-    }
-  }
-
-  String _formatRemainingTime(Worry worry) {
-    final remaining = worry.unlockAt - DateTime.now().millisecondsSinceEpoch;
-    if (remaining <= 0) return 'Unlocked';
-    final duration = Duration(milliseconds: remaining);
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-    final seconds = duration.inSeconds % 60;
-    if (hours > 0) return '${hours}h ${minutes}m left';
-    if (minutes > 0) return '${minutes}m ${seconds}s left';
-    return '${seconds}s left';
+  String _formatTime(int totalSeconds) {
+    if (totalSeconds <= 0) return '0h 0m 00s';
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+    final sStr = seconds < 10 ? '0$seconds' : '$seconds';
+    return '${hours}h ${minutes}m ${sStr}s';
   }
 
   @override
   Widget build(BuildContext context) {
-    final worries = widget.storage.getWorries()
-        .where((w) => w.status != 'released')
-        .toList();
+    final activeWorries = widget.storage.getWorries().where((w) => w.status != 'released').toList();
+    if (activeWorries.isEmpty) return const SizedBox.shrink();
 
-    return SafeArea(
+    // Find the closest unlock time
+    activeWorries.sort((a, b) => a.unlockAt.compareTo(b.unlockAt));
+    final closestWorry = activeWorries.first;
+    final remainingMs = closestWorry.unlockAt - DateTime.now().millisecondsSinceEpoch;
+    final remainingSeconds = remainingMs > 0 ? remainingMs ~/ 1000 : 0;
+    
+    // Automatically transition if timer hits 0
+    if (remainingSeconds <= 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Mark all ready worries as revealed and change state
+        for (var w in activeWorries) {
+          if (w.unlockAt <= DateTime.now().millisecondsSinceEpoch) {
+            widget.storage.markRevealed(w.id);
+          }
+        }
+        widget.onStateChange();
+      });
+    }
+
+    final worriesCountText = AppStrings.get('worriesCount', locale: _locale).replaceAll('{count}', '${activeWorries.length}');
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Column(
         children: [
-          // ── Insights Header ──
-          if (widget.storage.state.totalWorriesCreated > 0)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.sp4, AppSpacing.sp4, AppSpacing.sp4, 0),
-              child: StressGraph(
-                totalCreated: widget.storage.state.totalWorriesCreated,
-                totalReleased: widget.storage.state.totalWorriesReleased,
-                totalImportant: widget.storage.state.totalWorriesMarkedImportant,
-              ),
-            ),
-
-          // ── Worry Cards List ──
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(AppSpacing.sp4),
-              itemCount: worries.length,
-              itemBuilder: (context, index) {
-                final worry = worries[index];
-                return _WorryCard(
-                  key: ValueKey(worry.id),
-                  worry: worry,
-                  remainingTime: _formatRemainingTime(worry),
-                  onToggleImportant: () => _toggleImportant(worry),
-                  onRemove: () => _removeWorry(worry.id),
-                  onOpenBox: () {
-                    widget.storage.markRevealed(worry.id);
-                    setState(() {});
-                  },
-                  onAddMoreTime: (seconds) {
-                    widget.storage.addTimeToWorry(worry.id, seconds);
-                    setState(() {});
-                  },
-                );
-              },
+          // Closed Box
+          const SizedBox(
+            width: 144,
+            height: 144,
+            child: BoxAnimationWidget(
+              boxState: BoxState.closed,
+              size: 144,
             ),
           ),
+          const SizedBox(height: 24),
 
-          // ── Compact Input Form (Anchored to Bottom) ──
-          GlassCard(
-            borderRadius: 0,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sp4, vertical: AppSpacing.sp3),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.add_circle_outline, size: 16, color: AppColors.accent),
-                      const SizedBox(width: AppSpacing.sp2),
-                      Text(
-                        'Add another problem',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.text,
-                          fontSize: 14,
-                        ),
+          // Headline
+          Text(
+            AppStrings.get('lockedHeadline', locale: _locale),
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFDBEAFE), // blue-100
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Locked away until your scheduled Worry Time',
+            style: TextStyle(
+              fontSize: 12,
+              color: const Color(0xFFBFDBFE).withValues(alpha: 0.6), // blue-200/60
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Countdown Timer Display Card
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: AppColors.glassPanelBg,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.glassPanelBorder),
+              boxShadow: const [
+                BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, 10)),
+              ],
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.access_time, size: 14, color: AppColors.accent),
+                    const SizedBox(width: 6),
+                    Text(
+                      AppStrings.get('opensIn', locale: _locale).toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
+                        color: AppColors.accentSoft.withValues(alpha: 0.8),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sp2),
-                  
-                  // Compact Text Fields
-                  GlassInputCard(
-                    child: Column(
-                      children: [
-                        TextField(
-                          controller: _titleController,
-                          maxLength: 100,
-                          onChanged: (_) => setState(() {}),
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
-                          decoration: const InputDecoration(
-                            hintText: 'Title...',
-                            counterText: '',
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            filled: false,
-                          ),
-                        ),
-                        Divider(height: 1, color: AppColors.border),
-                        TextField(
-                          controller: _descController,
-                          maxLines: 2,
-                          maxLength: 500,
-                          onChanged: (_) => setState(() {}),
-                          style: const TextStyle(fontSize: 13, color: Colors.white),
-                          decoration: const InputDecoration(
-                            hintText: 'Description...',
-                            counterText: '',
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            filled: false,
-                          ),
-                        ),
-                      ],
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _formatTime(remainingSeconds),
+                  style: const TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    fontFamily: 'monospace',
                   ),
-                  const SizedBox(height: AppSpacing.sp3),
-                  
-                  // Compact Timer & Submit Row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: _durationOptions.map((option) {
-                              final isSelected = _selectedDuration == option.seconds;
-                              return GestureDetector(
-                                onTap: () => setState(() => _selectedDuration = option.seconds),
-                                child: AnimatedContainer(
-                                  duration: AppDurations.fast,
-                                  margin: const EdgeInsets.only(right: 6),
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? AppColors.accent.withValues(alpha: 0.2) : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: isSelected ? AppColors.accent : AppColors.border,
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    option.label,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                      color: isSelected ? AppColors.accent : AppColors.textMuted,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  worriesCountText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFBFDBFE).withValues(alpha: 0.5),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(color: Color(0x1AFFFFFF)),
+                TextButton.icon(
+                  onPressed: () async {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay(
+                        hour: widget.storage.state.settings.unlockHour,
+                        minute: widget.storage.state.settings.unlockMinute,
+                      ),
+                    );
+                    if (time != null) {
+                      await widget.storage.setUnlockTime(time.hour, time.minute);
+                      // Update existing pending worries to this new time
+                      final now = DateTime.now();
+                      var unlockDate = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+                      if (unlockDate.isBefore(now)) {
+                        unlockDate = unlockDate.add(const Duration(days: 1));
+                      }
+                      
+                      final pending = widget.storage.getPendingWorries();
+                      for (final w in pending) {
+                        w.unlockAt = unlockDate.millisecondsSinceEpoch;
+                      }
+                      // Need to save the changes explicitly
+                      // A dirty hack is to just re-save via setUnlockTime
+                      await widget.storage.setUnlockTime(time.hour, time.minute);
+                      if (mounted) setState(() {});
+                    }
+                  },
+                  icon: const Icon(Icons.edit_calendar, size: 16, color: Color(0xFF93C5FD)),
+                  label: const Text(
+                    'Change Unlock Time',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF93C5FD)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Quick Add
+          SizedBox(
+            width: double.infinity,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppStrings.get('somethingElse', locale: _locale),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFBFDBFE).withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.glassInputBg,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextField(
+                          controller: _quickInputController,
+                          onChanged: (_) => setState(() {}),
+                          onSubmitted: (_) => _quickAdd(),
+                          decoration: InputDecoration(
+                            hintText: 'Quick capture...',
+                            hintStyle: TextStyle(color: const Color(0xFFBFDBFE).withValues(alpha: 0.4)),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: false,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.sp2),
-                      ElevatedButton(
-                        onPressed: _titleController.text.trim().isEmpty ? null : _submitWorry,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        backgroundColor: _quickInputController.text.trim().isNotEmpty 
+                            ? AppColors.accent.withValues(alpha: 0.5) 
+                            : Colors.white.withValues(alpha: 0.05),
+                        foregroundColor: _quickInputController.text.trim().isNotEmpty ? const Color(0xFFDBEAFE) : Colors.grey,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: _quickInputController.text.trim().isNotEmpty
+                                ? AppColors.accent.withValues(alpha: 0.4)
+                                : Colors.white.withValues(alpha: 0.05),
+                          )
                         ),
-                        child: const Text('Add', style: TextStyle(fontSize: 13)),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                      onPressed: _quickInputController.text.trim().isEmpty ? null : _quickAdd,
+                      child: Text(AppStrings.get('quickPutAway', locale: _locale)),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _DurationOption {
-  final String label;
-  final int seconds;
-  const _DurationOption(this.label, this.seconds);
-}
-
-class _WorryCard extends StatefulWidget {
-  final Worry worry;
-  final String remainingTime;
-  final VoidCallback onToggleImportant;
-  final VoidCallback onRemove;
-  final VoidCallback onOpenBox;
-  final Function(int) onAddMoreTime;
-
-  const _WorryCard({
-    super.key,
-    required this.worry,
-    required this.remainingTime,
-    required this.onToggleImportant,
-    required this.onRemove,
-    required this.onOpenBox,
-    required this.onAddMoreTime,
-  });
-
-  @override
-  State<_WorryCard> createState() => _WorryCardState();
-}
-
-class _WorryCardState extends State<_WorryCard> {
-  bool _isExpanded = false;
-  bool _isBursting = false;
-
-  void _showAddTimeDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: AppColors.bg0,
-          title: const Text('Add more time', style: TextStyle(color: AppColors.text, fontSize: 16)),
-          content: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _DurationOption('15m', 900),
-              _DurationOption('1h', 3600),
-              _DurationOption('3h', 10800),
-              _DurationOption('12h', 43200),
-              _DurationOption('1w', 604800),
-              _DurationOption('1M', 2592000),
-            ].map((opt) => ActionChip(
-              backgroundColor: AppColors.surface,
-              side: const BorderSide(color: AppColors.border),
-              label: Text(opt.label, style: const TextStyle(color: AppColors.text)),
-              onPressed: () {
-                Navigator.pop(context);
-                widget.onAddMoreTime(opt.seconds);
-              },
-            )).toList(),
-          ),
-        );
-      }
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isTimerEnded = widget.remainingTime == 'Unlocked';
-    final isUnlocked = widget.worry.status == 'revealed' || widget.worry.status == 'kept';
-    final isImportant = widget.worry.isImportant;
-
-    if (!isUnlocked && _isExpanded) {
-      _isExpanded = false;
-    }
-
-    if (!isUnlocked) {
-      // ── Locked Bin State ──
-      return Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.sp3),
-        padding: const EdgeInsets.all(AppSpacing.sp3),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceStrong,
-          borderRadius: BorderRadius.circular(AppShape.radius),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            SizedBox(
-              width: 80,
-              height: 80,
-              child: BoxAnimationWidget(
-                boxState: isTimerEnded ? BoxState.open : BoxState.closed,
-                size: 80,
-              ),
-            ),
-
-              if (isTimerEnded)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    OutlinedButton(
-                      onPressed: () => _showAddTimeDialog(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        foregroundColor: AppColors.text,
-                        side: const BorderSide(color: AppColors.border),
-                      ),
-                      child: const Text('Keep Locked', style: TextStyle(fontSize: 12)),
-                    ),
-                    const SizedBox(width: AppSpacing.sp2),
-                    ElevatedButton.icon(
-                      onPressed: widget.onOpenBox,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: AppColors.bg0,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                      icon: const Icon(Icons.lock_open_rounded, size: 16),
-                      label: const Text('Open Box', style: TextStyle(fontSize: 12)),
-                    ),
-                  ],
-                )
-              else
-                Text(
-                  widget.remainingTime,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: AppColors.accent,
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
-                ),
-            ],
-          ),
-      );
-    }
-
-    // ── Unlocked Card State ──
-    return ParticleBurst(
-      isBursting: _isBursting,
-      onComplete: widget.onRemove,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sp3),
-        child: GlassCard(
-          color: isImportant ? AppColors.accent.withValues(alpha: 0.08) : null,
-          borderColor: isImportant ? AppColors.accent.withValues(alpha: 0.4) : null,
-          padding: const EdgeInsets.all(AppSpacing.sp3),
-          child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── 3D Claymorphic Box ──
-                SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: BoxAnimationWidget(
-                    size: 60,
-                    boxState: isUnlocked ? BoxState.open : BoxState.closed,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sp3),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.sp1),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.worry.title.isNotEmpty
-                              ? widget.worry.title
-                              : DateFormat('MMM d, yyyy h:mm a').format(DateTime.fromMillisecondsSinceEpoch(widget.worry.createdAt)),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: widget.worry.title.isNotEmpty ? FontWeight.w600 : FontWeight.w400,
-                            color: widget.worry.title.isNotEmpty ? AppColors.text : AppColors.textMuted,
-                            fontStyle: widget.worry.title.isNotEmpty ? FontStyle.normal : FontStyle.italic,
-                          ),
-                        ),
-                        if (isImportant) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.flag_rounded,
-                                    size: 10, color: AppColors.accent),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Important',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.accent,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                if (!isTimerEnded)
-                  Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.sp1),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.lock_rounded,
-                          size: 14,
-                          color: AppColors.textMuted,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          widget.remainingTime,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textMuted,
-                            fontFeatures: [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else if (isUnlocked)
-                  IconButton(
-                    onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                    icon: Icon(
-                      _isExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                      color: AppColors.accent,
-                    ),
-                    tooltip: _isExpanded ? 'Hide description' : 'Show description',
-                  ),
-              ],
-            ),
-
-            AnimatedSize(
-              duration: AppDurations.base,
-              curve: Curves.easeInOut,
-              child: _isExpanded && widget.worry.text.isNotEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.only(
-                        top: AppSpacing.sp3,
-                        left: AppSpacing.sp1,
-                        right: AppSpacing.sp1,
-                      ),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(AppSpacing.sp3),
-                        decoration: BoxDecoration(
-                          color: AppColors.bg0.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(AppShape.radiusSm),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.worry.text,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.text,
-                                height: 1.4,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.sp3),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  widget.worry.relativeTime,
-                                  style: const TextStyle(
-                                      fontSize: 11, color: AppColors.textMuted),
-                                ),
-                                Row(
-                                  children: [
-                                    TextButton.icon(
-                                      onPressed: widget.onToggleImportant,
-                                      icon: Icon(
-                                        isImportant ? Icons.flag_rounded : Icons.flag_outlined,
-                                        size: 16,
-                                        color: isImportant
-                                            ? AppColors.accent
-                                            : AppColors.textMuted,
-                                      ),
-                                      label: Text(
-                                        isImportant ? 'Important' : 'Mark',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: isImportant
-                                              ? AppColors.accent
-                                              : AppColors.textMuted,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSpacing.sp1),
-                                    TextButton.icon(
-                                      onPressed: () {
-                                        setState(() => _isBursting = true);
-                                      },
-                                      icon: const Icon(Icons.close_rounded,
-                                          size: 16, color: AppColors.error),
-                                      label: const Text(
-                                        'Let go',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.error,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ],
-        ),
-      )),
     );
   }
 }
