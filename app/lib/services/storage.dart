@@ -118,6 +118,13 @@ class StorageService extends ChangeNotifier {
     }
 
     _state.worries.insert(0, worry);
+    _state = AppState(
+      schemaVersion: _state.schemaVersion,
+      settings: _state.settings,
+      worries: _state.worries,
+      totalWorriesCreated: _state.totalWorriesCreated + 1,
+      totalWorriesReleased: _state.totalWorriesReleased,
+    );
     await _saveState();
     notifyListeners();
     return worry;
@@ -135,7 +142,13 @@ class StorageService extends ChangeNotifier {
       durationSeconds: durationSeconds,
     );
     _state.worries.insert(0, worry);
-    _state.totalWorriesCreated++;
+    _state = AppState(
+      schemaVersion: _state.schemaVersion,
+      settings: _state.settings,
+      worries: _state.worries,
+      totalWorriesCreated: _state.totalWorriesCreated + 1,
+      totalWorriesReleased: _state.totalWorriesReleased,
+    );
     await _saveState();
     notifyListeners();
     return worry;
@@ -186,7 +199,13 @@ class StorageService extends ChangeNotifier {
     final initialCount = _state.worries.length;
     _state.worries.removeWhere((w) => w.id == id);
     if (_state.worries.length < initialCount) {
-      _state.totalWorriesReleased++;
+      _state = AppState(
+        schemaVersion: _state.schemaVersion,
+        settings: _state.settings,
+        worries: _state.worries,
+        totalWorriesCreated: _state.totalWorriesCreated,
+        totalWorriesReleased: _state.totalWorriesReleased + 1,
+      );
       await _saveState();
       notifyListeners();
     }

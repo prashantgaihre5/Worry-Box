@@ -12,11 +12,15 @@ class AppState {
   final int schemaVersion;
   final AppSettings settings;
   final List<Worry> worries;
+  final int totalWorriesCreated;
+  final int totalWorriesReleased;
 
   AppState({
     this.schemaVersion = currentSchemaVersion,
     AppSettings? settings,
     List<Worry>? worries,
+    this.totalWorriesCreated = 0,
+    this.totalWorriesReleased = 0,
   })  : settings = settings ?? AppSettings(),
         worries = worries ?? [];
 
@@ -44,6 +48,8 @@ class AppState {
                 ?.map((w) => Worry.fromJson(w as Map<String, dynamic>))
                 .toList() ??
             [],
+        totalWorriesCreated: json['totalWorriesCreated'] as int? ?? 0,
+        totalWorriesReleased: json['totalWorriesReleased'] as int? ?? 0,
       );
     } catch (_) {
       return AppState.defaults();
@@ -56,6 +62,8 @@ class AppState {
       'schemaVersion': schemaVersion,
       'settings': settings.toJson(),
       'worries': worries.map((w) => w.toJson()).toList(),
+      'totalWorriesCreated': totalWorriesCreated,
+      'totalWorriesReleased': totalWorriesReleased,
     };
   }
 }
