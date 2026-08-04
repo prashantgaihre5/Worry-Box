@@ -30,8 +30,11 @@ class WorryBoxApp extends StatefulWidget {
 class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
   final AudioService _audio = AudioService();
   late ViewState _currentView;
+  ViewState? _manualOverrideView;
   late String _locale;
   String? _lastAddedWorryText;
+
+  ViewState get _effectiveView => _manualOverrideView ?? _currentView;
 
   @override
   void initState() {
@@ -70,7 +73,12 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
     if (newView != _currentView || _lastAddedWorryText != null) {
       setState(() {
         _currentView = newView;
+        _manualOverrideView = null; // Reset override on significant state change
         _lastAddedWorryText = null;
+      });
+    } else {
+      setState(() {
+        // Just refresh to ensure timer states might be updated
       });
     }
   }
@@ -78,6 +86,7 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
   void _onWorryAdded(String text) {
     setState(() {
       _currentView = deriveViewState(widget.storage);
+      _manualOverrideView = null; // Always reset when they add a worry
       _lastAddedWorryText = text;
     });
   }
@@ -128,17 +137,84 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
 
             // ── Main content with AnimatedSwitcher transitions ──
             SafeArea(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                switchInCurve: Curves.easeIn,
-                switchOutCurve: Curves.easeOut,
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-                child: KeyedSubtree(
-                  key: ValueKey<ViewState>(_currentView),
-                  child: _buildCurrentView(),
-                ),
+              child: Column(
+                children: [
+                  // Global Top Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.inventory_2_outlined, color: AppColors.accent, size: 24),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Worry Box',
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 18),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                _audio.isPlaying ? Icons.music_note_rounded : Icons.music_off_rounded,
+                                color: AppColors.textMuted,
+                                size: 20,
+                              ),
+                              onPressed: () async {
+                                await _audio.toggle();
+                                setState(() {});
+                              },
+                            ),
+                            TextButton(
+                              onPressed: _toggleLocale,
+                              child: Text(
+                                _locale.toUpperCase(),
+                                style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Segmented Control (Visual Indicator)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceStrong,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          _buildSegment('Capture', ViewState.capture, Icons.edit_outlined),
+                          _buildSegment('Locked', ViewState.locked, Icons.lock_outline),
+                          _buildSegment('Reveal', ViewState.reveal, Icons.lock_open_outlined),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 500),
+                      switchInCurve: Curves.easeIn,
+                      switchOutCurve: Curves.easeOut,
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
+                      child: KeyedSubtree(
+                        key: ValueKey<ViewState>(_effectiveView),
+                        child: _buildCurrentView(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -192,7 +268,7 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
   }
 
   Widget _buildCurrentView() {
-    switch (_currentView) {
+    switch (_effectiveView) {
       case ViewState.capture:
         return CaptureScreen(
           storage: widget.storage,
@@ -216,6 +292,41 @@ class _WorryBoxAppState extends State<WorryBoxApp> with WidgetsBindingObserver {
           onAllCleared: _refreshView,
         );
     }
+  }
+
+  Widget _buildSegment(String text, ViewState state, IconData icon) {
+    final isActive = _effectiveView == state;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _manualOverrideView = state;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.accent.withValues(alpha: 0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: isActive ? AppColors.accent : AppColors.textMuted),
+              const SizedBox(width: 6),
+              Text(
+                text,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  color: isActive ? AppColors.accent : AppColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
