@@ -369,7 +369,6 @@ class _WorryCardState extends State<_WorryCard> {
   Widget build(BuildContext context) {
     // A worry is 'Ready to Open' when timer ends but it hasn't been opened yet.
     final isTimerEnded = widget.remainingTime == 'Unlocked';
-    final isReadyToOpen = isTimerEnded && widget.worry.status == 'locked';
     final isUnlocked = widget.worry.status == 'revealed' || widget.worry.status == 'kept';
     final isImportant = widget.worry.isImportant;
 
@@ -377,6 +376,73 @@ class _WorryCardState extends State<_WorryCard> {
       _isExpanded = false;
     }
 
+    if (!isUnlocked) {
+      // ── Locked Bin State ──
+      return Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sp3),
+        padding: const EdgeInsets.all(AppSpacing.sp3),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceStrong,
+          borderRadius: BorderRadius.circular(AppShape.radius),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.bg1,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.delete_outline_rounded, color: AppColors.textMuted, size: 24),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sp3),
+                const Text(
+                  'Locked in bin',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            if (isTimerEnded)
+              ElevatedButton.icon(
+                onPressed: () {
+                  widget.storage.markRevealed(widget.worry.id);
+                  setState(() {});
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.bg0,
+                ),
+                icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                label: const Text('Open Bin'),
+              )
+            else
+              Text(
+                widget.remainingTime,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
+    // ── Unlocked Card State ──
     return ParticleBurst(
       isBursting: _isBursting,
       onComplete: widget.onRemove,

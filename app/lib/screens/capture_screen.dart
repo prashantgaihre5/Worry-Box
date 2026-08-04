@@ -148,81 +148,75 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
           const SizedBox(height: AppSpacing.sp4),
 
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppShape.radius),
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sp4,
-                  vertical: AppSpacing.sp4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppShape.radius),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sp4,
+              vertical: AppSpacing.sp3,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceStrong,
+              borderRadius: BorderRadius.circular(AppShape.radiusSm),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.timer_outlined,
-                            size: 18, color: AppColors.accent),
-                        const SizedBox(width: AppSpacing.sp2),
-                        Text(
-                          'Lock for:',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.text,
-                                fontWeight: FontWeight.w500,
-                              ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sp3),
-                    Wrap(
-                      spacing: AppSpacing.sp2,
-                      runSpacing: AppSpacing.sp2,
-                      children: _durationOptions.map((option) {
-                        final isSelected = _selectedDuration == option.seconds;
-                        return GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedDuration = option.seconds),
-                          child: AnimatedContainer(
-                            duration: AppDurations.fast,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColors.accent.withValues(alpha: 0.25)
-                                  : AppColors.bg1.withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.accent
-                                    : AppColors.border,
-                                width: isSelected ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Text(
-                              option.label,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight:
-                                    isSelected ? FontWeight.w600 : FontWeight.w400,
-                                color:
-                                    isSelected ? AppColors.accent : AppColors.text,
-                              ),
-                            ),
+                    const Icon(Icons.timer_outlined,
+                        size: 18, color: AppColors.accent),
+                    const SizedBox(width: AppSpacing.sp2),
+                    Text(
+                      'Lock for:',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.text,
+                            fontWeight: FontWeight.w500,
                           ),
-                        );
-                      }).toList(),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: AppSpacing.sp3),
+                Wrap(
+                  spacing: AppSpacing.sp2,
+                  runSpacing: AppSpacing.sp2,
+                  children: _durationOptions.map((option) {
+                    final isSelected = _selectedDuration == option.seconds;
+                    return GestureDetector(
+                      onTap: () =>
+                          setState(() => _selectedDuration = option.seconds),
+                      child: AnimatedContainer(
+                        duration: AppDurations.fast,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.accent.withValues(alpha: 0.25)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.accent
+                                : AppColors.border,
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Text(
+                          option.label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color:
+                                isSelected ? AppColors.accent : AppColors.text,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
             ),
           ),
 

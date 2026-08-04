@@ -3,20 +3,12 @@ import 'package:flutter/material.dart';
 /// Design tokens from SPEC.md §7.
 /// All colors, text styles, and shapes are defined here.
 class AppColors {
-  // Deep space backgrounds
-  static const bg0 = Color(0xFF0A0F1E);
-  static const bg1 = Color(0xFF131A32);
+  static const bg0 = Color(0xFF0B1020);
+  static const bg1 = Color(0xFF151D3B);
   
-  // Glass surfaces
-  static const surface = Color(0x15FFFFFF); // Ultra sheer
-  static const surfaceStrong = Color(0x25FFFFFF); // Slightly stronger glass
-  static const border = Color(0x20FFFFFF); // Glass border
-  static const borderHighlight = Color(0x40FFFFFF); // Specular highlight
-
-  // Vibrant Orbs (for backdrop)
-  static const orb1 = Color(0xFF7B61FF); // Vibrant purple
-  static const orb2 = Color(0xFF45B0E5); // Bright cyan
-  static const orb3 = Color(0xFFFF5288); // Hot pink
+  static const surface = Color(0x0FFFFFFF); // 6% white
+  static const surfaceStrong = Color(0x1AFFFFFF); // 10% white
+  static const border = Color(0x26FFFFFF); // 15% white
 
   static const text = Color(0xFFEAEEF7);
   static const textMuted = Color(0xFF97A3C4);
