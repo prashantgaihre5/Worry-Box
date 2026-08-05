@@ -1,4 +1,4 @@
-# Worry Box — Flutter Android App Build Specification
+# Worry Box — Flutter Android App Build Specification.
 
 > **Purpose of this file:** this is the single source of truth for building Worry Box.
 > Every decision here is final — there are no open questions. If an implementation detail
